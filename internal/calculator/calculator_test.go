@@ -49,7 +49,7 @@ func TestRejectInvalidLiquidation(t *testing.T) {
 }
 
 func TestFinancingKnownAndConservation(t *testing.T) {
-	for _, system := range []string{"PRICE", "SAC"} {
+	for _, system := range []string{"PRICE", "SAC", "GAUSS"} {
 		for _, rate := range []string{"0", "1", "2.85"} {
 			rows, err := Finance(FinancingRequest{"1000", rate, 3, system})
 			if err != nil {
@@ -82,7 +82,7 @@ func TestFinancingKnownAndConservation(t *testing.T) {
 }
 
 func TestFinancingValidation(t *testing.T) {
-	for _, r := range []FinancingRequest{{"1000", "1", 0, "PRICE"}, {"1000", "-1", 3, "PRICE"}, {"1000", "1", 3, "GAUSS"}, {"0", "1", 3, "SAC"}, {"1000.001", "1", 3, "SAC"}} {
+	for _, r := range []FinancingRequest{{"1000", "1", 0, "PRICE"}, {"1000", "-1", 3, "PRICE"}, {"1000", "1", 3, "UNKNOWN"}, {"0", "1", 3, "SAC"}, {"1000.001", "1", 3, "SAC"}} {
 		if _, err := Finance(r); err == nil {
 			t.Fatal(r)
 		}

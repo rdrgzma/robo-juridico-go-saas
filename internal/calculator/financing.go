@@ -1,66 +1,53 @@
+// Adapted from the authorized legacy contract; Finance is the single schedule implementation.
 package calculator
 
 import (
 	"fmt"
-
 	"github.com/shopspring/decimal"
+	"strings"
 )
 
-type FinancingRequest struct {
-	Principal    string `json:"principal"`
-	MonthlyRate  string `json:"taxa_mensal"`
-	Installments int    `json:"parcelas"`
-	System       string `json:"sistema"`
-}
-
-type Installment struct {
-	Number       int    `json:"numero"`
-	Payment      string `json:"prestacao"`
-	Interest     string `json:"juros"`
-	Amortization string `json:"amortizacao"`
-	Balance      string `json:"saldo"`
-}
-
-func Finance(r FinancingRequest) ([]Installment, error) {
-	p, err := ParseDecimal(r.Principal)
+func CalcularRevisaoFinanciamento(r CalculoFinanciamentoRequest) (*CalculoFinanciamentoResponse, error) {
+	for _, d := range []decimal.Decimal{r.ValorFinanciado, r.TaxaContratadaMensal, r.TaxaMercadoMensal, r.TaxaMensalContratada, r.TaxaMensalMercado} {
+		if err := ValidateDecimal(d); err != nil {
+			return nil, err
+		}
+	}
+	if r.NumeroParcelas == 0 {
+		r.NumeroParcelas = r.QuantidadeParcelas
+	}
+	if r.TaxaContratadaMensal.IsZero() && !r.TaxaMensalContratada.IsZero() {
+		r.TaxaContratadaMensal = r.TaxaMensalContratada
+	}
+	if r.TaxaMercadoMensal.IsZero() && !r.TaxaMensalMercado.IsZero() {
+		r.TaxaMercadoMensal = r.TaxaMensalMercado
+	}
+	system := strings.ToUpper(strings.TrimSpace(string(r.SistemaAmortizacao)))
+	if system == "" {
+		system = "PRICE"
+	}
+	contract, err := Finance(FinancingRequest{r.ValorFinanciado.String(), r.TaxaContratadaMensal.String(), r.NumeroParcelas, "PRICE"})
 	if err != nil {
 		return nil, err
 	}
-	i, err := ParseDecimal(r.MonthlyRate)
+	revised, err := Finance(FinancingRequest{r.ValorFinanciado.String(), r.TaxaMercadoMensal.String(), r.NumeroParcelas, system})
 	if err != nil {
 		return nil, err
 	}
-	if !p.IsPositive() || !p.Equal(p.Round(2)) || i.IsNegative() || i.GreaterThan(decimal.NewFromInt(100)) || r.Installments < 1 || r.Installments > 600 {
-		return nil, fmt.Errorf("financiamento fora dos limites; principal deve ter centavos exatos")
+	out := &CalculoFinanciamentoResponse{Sucesso: true, SistemaAmortizacao: SistemaAmortizacao(system), ValorFinanciado: r.ValorFinanciado, NumeroParcelas: r.NumeroParcelas, TaxaContratadaMensal: r.TaxaContratadaMensal, TaxaMercadoMensal: r.TaxaMercadoMensal, PrestacaoContratada: decimal.RequireFromString(contract[0].Payment), PrestacaoRevisadaInicial: decimal.RequireFromString(revised[0].Payment)}
+	for k, row := range revised {
+		cp := decimal.RequireFromString(contract[k].Payment)
+		rp := decimal.RequireFromString(row.Payment)
+		delta := cp.Sub(rp)
+		out.TotalPagoContratado = out.TotalPagoContratado.Add(cp)
+		out.TotalDevidoRevisado = out.TotalDevidoRevisado.Add(rp)
+		out.DiferencaTotalSimples = out.DiferencaTotalSimples.Add(delta)
+		out.TabelaEvolucao = append(out.TabelaEvolucao, ParcelaFinanciamentoItem{NumeroParcela: k + 1, PrestacaoContratada: cp, PrestacaoRevisada: rp, DiferencaParcela: delta, JurosRevisado: decimal.RequireFromString(row.Interest), AmortizacaoRevisada: decimal.RequireFromString(row.Amortization), SaldoDevedor: decimal.RequireFromString(row.Balance)})
 	}
-	if r.System != "PRICE" && r.System != "SAC" {
-		return nil, fmt.Errorf("sistema deve ser PRICE ou SAC; GAUSS aguarda homologação")
+	out.IndebitoCobrado = decimal.Max(decimal.Zero, out.DiferencaTotalSimples)
+	if r.RestituicaoEmDobro || r.RepeticaoEmDobro {
+		out.IndebitoCobrado = out.IndebitoCobrado.Mul(decimal.NewFromInt(2))
 	}
-	i = i.Div(decimal.NewFromInt(100))
-	n := decimal.NewFromInt(int64(r.Installments))
-	amort := p.Div(n).Round(2)
-	payment := amort
-	if !i.IsZero() {
-		factor := decimal.NewFromInt(1).Add(i).Pow(n)
-		payment = p.Mul(i).Mul(factor).Div(factor.Sub(decimal.NewFromInt(1))).Round(2)
-	}
-	balance := p
-	rows := make([]Installment, 0, r.Installments)
-	for k := 1; k <= r.Installments; k++ {
-		interest := balance.Mul(i).Round(2)
-		a := amort
-		if r.System == "PRICE" {
-			a = payment.Sub(interest)
-		}
-		if a.IsNegative() {
-			return nil, fmt.Errorf("precisão insuficiente para amortização")
-		}
-		// The final payment itself is adjusted, keeping payment = interest + amortization.
-		if k == r.Installments || a.GreaterThan(balance) {
-			a = balance
-		}
-		balance = balance.Sub(a)
-		rows = append(rows, Installment{k, a.Add(interest).StringFixed(2), interest.StringFixed(2), a.StringFixed(2), balance.StringFixed(2)})
-	}
-	return rows, nil
+	out.NotasMetodologicas = []string{fmt.Sprintf("Simulação %s; valores decimais e ajuste da última prestação. Contrato comparado por PRICE. Aplicabilidade e eventual restituição exigem validação específica.", system)}
+	return out, nil
 }
