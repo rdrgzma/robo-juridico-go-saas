@@ -1,0 +1,349 @@
+{
+  "commit": "12685bbe7a5be048fcaf01332f67503a09b0bee8",
+  "method": "git ls-tree -r HEAD; compare Git blob IDs; no source copied",
+  "pairs": [
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/auth/auth.go",
+      "desktop": "5-app-juridico-desktop/internal/auth/auth.go",
+      "identical_blob": false,
+      "api_blob": "c88dd395fbc2abd58b0a63cfabf34de805c5be58",
+      "desktop_blob": "edadf7f06cd2d9611745fb03ceb65a491930bbfd"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/auth/auth_test.go",
+      "desktop": "5-app-juridico-desktop/internal/auth/auth_test.go",
+      "identical_blob": false,
+      "api_blob": "6244900711edc4b10db1bc6cd9216089fcfed19f",
+      "desktop_blob": "3eb26e1950f1df0f8dfd3ab7c1d032d869f65a0a"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/bridge/bridge.go",
+      "desktop": "5-app-juridico-desktop/internal/bridge/bridge.go",
+      "identical_blob": false,
+      "api_blob": "68cd70ec2efe1ad30df28207f940ac81e4fe1f8e",
+      "desktop_blob": "6f72da7146fff4e5e88755486c9a92909f78ee7a"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/bridge/bridge_test.go",
+      "desktop": "5-app-juridico-desktop/internal/bridge/bridge_test.go",
+      "identical_blob": false,
+      "api_blob": "fa340dcf7f20b4d98bd80e8d20d5a7ebd12602f2",
+      "desktop_blob": "400e19be24a51a6c3414851b4d1ee4c725c4c21d"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/cache/cache.go",
+      "desktop": "5-app-juridico-desktop/internal/cache/cache.go",
+      "identical_blob": true,
+      "api_blob": "d3d53bf4e7083ae387f6bf8d39128d0e94dc36e1",
+      "desktop_blob": "d3d53bf4e7083ae387f6bf8d39128d0e94dc36e1"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/cache/cache_test.go",
+      "desktop": "5-app-juridico-desktop/internal/cache/cache_test.go",
+      "identical_blob": false,
+      "api_blob": "96bbf478b81c07e569adc06fc1d8948e042a3d73",
+      "desktop_blob": "925a8ffad624514512555a5af9cd6c0df2ae1e43"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/bacen.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/bacen.go",
+      "identical_blob": false,
+      "api_blob": "205a7d9cbda44a19f34a75e32b1ce1ee25ff375a",
+      "desktop_blob": "0dd98034f7d9a35c2b9c37409eaab7c6824e86f9"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/coletor.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/coletor.go",
+      "identical_blob": false,
+      "api_blob": "96dfec2a1b4693dd71ae422d9b9865a491552f94",
+      "desktop_blob": "96f798596cde9331357e508c52b86ab5049bd38c"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/ibge.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/ibge.go",
+      "identical_blob": false,
+      "api_blob": "7e6a596efb92ee4ec9c5406d3341ecf0d846c0f0",
+      "desktop_blob": "58834ace8c2f3262079d63e189d1943f3df69b5a"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/tribunais.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/tribunais.go",
+      "identical_blob": false,
+      "api_blob": "bd4c304a7d01f8d6f6a860d16b0036ef2806780a",
+      "desktop_blob": "8456a8295c54043ee8aa9c453d15a00f817f8eda"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/worker.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/worker.go",
+      "identical_blob": false,
+      "api_blob": "ce09562caa52d32a184c13c165541ab4cd7eeb1e",
+      "desktop_blob": "5691fa81fecf01480f1cf7f2a00e4b70067feed5"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/collectors/worker_test.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/collectors/worker_test.go",
+      "identical_blob": false,
+      "api_blob": "10ba8e01089942f999e14bcc931b249a3b36d688",
+      "desktop_blob": "9ed45fd398e507e32a7b84a2a73caefbe8466bb3"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/correction.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/correction.go",
+      "identical_blob": true,
+      "api_blob": "8f252d0eca2709813d41a78820acb8ead726e365",
+      "desktop_blob": "8f252d0eca2709813d41a78820acb8ead726e365"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/engine.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/engine.go",
+      "identical_blob": true,
+      "api_blob": "eb176d2bf0e4ccc16034055586015ad5536257b1",
+      "desktop_blob": "eb176d2bf0e4ccc16034055586015ad5536257b1"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/engine_test.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/engine_test.go",
+      "identical_blob": true,
+      "api_blob": "0175a1cb66b71ad08223d972e42f12a2a3a67253",
+      "desktop_blob": "0175a1cb66b71ad08223d972e42f12a2a3a67253"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/exporter.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/exporter.go",
+      "identical_blob": true,
+      "api_blob": "5bfa0d332337b560791e1daf0a88f9e0bbee2817",
+      "desktop_blob": "5bfa0d332337b560791e1daf0a88f9e0bbee2817"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/financing.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/financing.go",
+      "identical_blob": true,
+      "api_blob": "cffb8c443d726495879792687f79b5659fc13b6b",
+      "desktop_blob": "cffb8c443d726495879792687f79b5659fc13b6b"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/importer.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/importer.go",
+      "identical_blob": true,
+      "api_blob": "ccb7906ac6f773afd8056282aa9ab46bbc84df09",
+      "desktop_blob": "ccb7906ac6f773afd8056282aa9ab46bbc84df09"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/importer_test.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/importer_test.go",
+      "identical_blob": true,
+      "api_blob": "b56fac930eeb96fa7183e381f040f1fcbe568705",
+      "desktop_blob": "b56fac930eeb96fa7183e381f040f1fcbe568705"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/interest.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/interest.go",
+      "identical_blob": true,
+      "api_blob": "f73ddc902aa7bfe32c3b68491b0689749f18e542",
+      "desktop_blob": "f73ddc902aa7bfe32c3b68491b0689749f18e542"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/models.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/models.go",
+      "identical_blob": true,
+      "api_blob": "35234f43448825b5b7fb39e26c728182632b78ae",
+      "desktop_blob": "35234f43448825b5b7fb39e26c728182632b78ae"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/penalties.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/penalties.go",
+      "identical_blob": true,
+      "api_blob": "fd7640b23d19f10e814950698eb4a487d62294c9",
+      "desktop_blob": "fd7640b23d19f10e814950698eb4a487d62294c9"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/repository.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/repository.go",
+      "identical_blob": true,
+      "api_blob": "57b71428d6a8f5c9df2056c599ad6248756a6ec0",
+      "desktop_blob": "57b71428d6a8f5c9df2056c599ad6248756a6ec0"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/calculator/seed.go",
+      "desktop": "5-app-juridico-desktop/internal/calculator/seed.go",
+      "identical_blob": true,
+      "api_blob": "4757a3d1af54a6384fbcaa5b18abf5abeb886057",
+      "desktop_blob": "4757a3d1af54a6384fbcaa5b18abf5abeb886057"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/cnj/cnj.go",
+      "desktop": "5-app-juridico-desktop/internal/cnj/cnj.go",
+      "identical_blob": true,
+      "api_blob": "5900cb4723e7f9db362dc696b6a93b45fe16d095",
+      "desktop_blob": "5900cb4723e7f9db362dc696b6a93b45fe16d095"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/cnj/cnj_test.go",
+      "desktop": "5-app-juridico-desktop/internal/cnj/cnj_test.go",
+      "identical_blob": false,
+      "api_blob": "075bd90b3d047b7a64b8415eb1f01c411a9c157b",
+      "desktop_blob": "b0bb51079599e86c011357646bad4eaf92452ef4"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/domain/erros.go",
+      "desktop": "5-app-juridico-desktop/internal/domain/erros.go",
+      "identical_blob": true,
+      "api_blob": "45fd8b97da4c885bee33cbaa0a4030003e627f1d",
+      "desktop_blob": "45fd8b97da4c885bee33cbaa0a4030003e627f1d"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/domain/modelos.go",
+      "desktop": "5-app-juridico-desktop/internal/domain/modelos.go",
+      "identical_blob": true,
+      "api_blob": "baa852ed28bad543db4bf9bc21c4ab609bb69f94",
+      "desktop_blob": "baa852ed28bad543db4bf9bc21c4ab609bb69f94"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/comunica/client.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/comunica/client.go",
+      "identical_blob": false,
+      "api_blob": "a4f583f451ad0d67cc89d693367cec011189b220",
+      "desktop_blob": "4965d5c4dbe73c02afb0ce586efacba7b4b5ed38"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/comunica/sanitizer.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/comunica/sanitizer.go",
+      "identical_blob": false,
+      "api_blob": "6c2b6be01cbe49aa2cd5858911dae9ae8909eb88",
+      "desktop_blob": "f8afb63fc148cdb393a278b404ae794797b904ed"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/comunica/sanitizer_test.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/comunica/sanitizer_test.go",
+      "identical_blob": false,
+      "api_blob": "6aa2735768e2ac166eb78979d80ed103fe2fe6fc",
+      "desktop_blob": "68c81dd972daaa5030eb9ca91c486b1d524599e3"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/datajud/client.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/datajud/client.go",
+      "identical_blob": false,
+      "api_blob": "cc151e87a26ad71af0146ced16dfa7039ba9f3c9",
+      "desktop_blob": "b3b455daf991b5c44e43ac67ceaf522b349b542e"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/datajud/parser.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/datajud/parser.go",
+      "identical_blob": false,
+      "api_blob": "8af8e29265448ff497150f0596108cbab1b92a9b",
+      "desktop_blob": "d10092fb9b234feae80c4f487d3662bd7fe0d7e7"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/fontes/datajud/parser_test.go",
+      "desktop": "5-app-juridico-desktop/internal/fontes/datajud/parser_test.go",
+      "identical_blob": false,
+      "api_blob": "7c3302d1d5a5dbb79b9d04b797ccc82c13b361d7",
+      "desktop_blob": "ec4993444dce4d77a00a087cf717cb635a46f3bb"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/licensing/fingerprint.go",
+      "desktop": "5-app-juridico-desktop/internal/licensing/fingerprint.go",
+      "identical_blob": true,
+      "api_blob": "3a0aed25db1183874cfc59de6cd7219dfce4c0fc",
+      "desktop_blob": "3a0aed25db1183874cfc59de6cd7219dfce4c0fc"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/licensing/licenca.go",
+      "desktop": "5-app-juridico-desktop/internal/licensing/licenca.go",
+      "identical_blob": true,
+      "api_blob": "ea46a9dde04ec7c6c8ad7b0aa53620add611eebc",
+      "desktop_blob": "ea46a9dde04ec7c6c8ad7b0aa53620add611eebc"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/licensing/licenca_test.go",
+      "desktop": "5-app-juridico-desktop/internal/licensing/licenca_test.go",
+      "identical_blob": true,
+      "api_blob": "1f74b3e50e796ea15c0c97949ae67e82903d4500",
+      "desktop_blob": "1f74b3e50e796ea15c0c97949ae67e82903d4500"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/network/httpclient.go",
+      "desktop": "5-app-juridico-desktop/internal/network/httpclient.go",
+      "identical_blob": true,
+      "api_blob": "d2667746c04111bba5db06b1b292c4acb08faf5b",
+      "desktop_blob": "d2667746c04111bba5db06b1b292c4acb08faf5b"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/network/proxy_pool.go",
+      "desktop": "5-app-juridico-desktop/internal/network/proxy_pool.go",
+      "identical_blob": true,
+      "api_blob": "8320027ab0d3aba6df06709fafc6fbc2de6edeba",
+      "desktop_blob": "8320027ab0d3aba6df06709fafc6fbc2de6edeba"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/prazos/prazos.go",
+      "desktop": "5-app-juridico-desktop/internal/prazos/prazos.go",
+      "identical_blob": true,
+      "api_blob": "24d5da7a148d7024ece194d23519d1e232895156",
+      "desktop_blob": "24d5da7a148d7024ece194d23519d1e232895156"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/service/orchestrator.go",
+      "desktop": "5-app-juridico-desktop/internal/service/orchestrator.go",
+      "identical_blob": false,
+      "api_blob": "44f7e6475e8adc2e35024f8cbac495820fcb62b0",
+      "desktop_blob": "1bac6bc9831bc4b15c7f9540fcbcbfab20ebd13d"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/storage/database.go",
+      "desktop": "5-app-juridico-desktop/internal/storage/database.go",
+      "identical_blob": true,
+      "api_blob": "5ec190ce836f613cd93a2568e6f01a87e2521acf",
+      "desktop_blob": "5ec190ce836f613cd93a2568e6f01a87e2521acf"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/storage/sqlite.go",
+      "desktop": "5-app-juridico-desktop/internal/storage/sqlite.go",
+      "identical_blob": true,
+      "api_blob": "7ea86c15eba05becc5f5f0222385f48a83bdd52a",
+      "desktop_blob": "7ea86c15eba05becc5f5f0222385f48a83bdd52a"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/transport/http/handlers.go",
+      "desktop": "5-app-juridico-desktop/internal/transport/http/handlers.go",
+      "identical_blob": false,
+      "api_blob": "934f60946aaf4fa0651eeb4b2d6c37843e6ecdc8",
+      "desktop_blob": "c55d60b9472dc3354e551efb1baf0f4d7e35dc2f"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/transport/http/handlers_test.go",
+      "desktop": "5-app-juridico-desktop/internal/transport/http/handlers_test.go",
+      "identical_blob": false,
+      "api_blob": "5e37c35618f7d677209e68b25df8588a5524d368",
+      "desktop_blob": "a60a9398e2d28650200a97a89fb3d4cc2e0eac63"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/transport/http/middleware.go",
+      "desktop": "5-app-juridico-desktop/internal/transport/http/middleware.go",
+      "identical_blob": false,
+      "api_blob": "a3e492ea5097af6e3de5a6c0bb2edd07032a0f9e",
+      "desktop_blob": "4c1af42126ad6a7c10888ee84ea3122d32af71e7"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/transport/http/response.go",
+      "desktop": "5-app-juridico-desktop/internal/transport/http/response.go",
+      "identical_blob": true,
+      "api_blob": "eba831fc1cc63b90b777d177616f4a57f093561d",
+      "desktop_blob": "eba831fc1cc63b90b777d177616f4a57f093561d"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/transport/http/router.go",
+      "desktop": "5-app-juridico-desktop/internal/transport/http/router.go",
+      "identical_blob": false,
+      "api_blob": "78fbb7813c95766628363add24270df64429e5d2",
+      "desktop_blob": "00771cd4fde910039f0f1f5b55c2086bb18bd630"
+    },
+    {
+      "api": "4-api-robo-juridico-php-go/api-juridica-go/internal/webhooks/webhooks.go",
+      "desktop": "5-app-juridico-desktop/internal/webhooks/webhooks.go",
+      "identical_blob": true,
+      "api_blob": "02376c77abfa2ea5002987430c0164340ee067e7",
+      "desktop_blob": "02376c77abfa2ea5002987430c0164340ee067e7"
+    }
+  ]
+}
