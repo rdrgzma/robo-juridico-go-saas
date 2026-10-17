@@ -79,3 +79,33 @@ func TestSimulationPrefixes(t *testing.T) {
 		t.Fatal(a.Code, a.Body.String(), b.Code, b.Body.String())
 	}
 }
+
+func TestSwaggerAndOpenAPIRoutes(t *testing.T) {
+	h := handler()
+
+	w := request(h, "GET", "/openapi.json", "", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"openapi": "3.0.3"`) {
+		t.Fatalf("expected 200 with openapi contract, got %d: %s", w.Code, w.Body.String())
+	}
+
+	w = request(h, "GET", "/docs", "", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "SwaggerUIBundle") || !strings.Contains(w.Body.String(), "/openapi.json") {
+		t.Fatalf("expected 200 with Swagger UI, got %d: %s", w.Code, w.Body.String())
+	}
+
+	w = request(h, "GET", "/swagger", "", "")
+	if w.Code != 301 || w.Header().Get("Location") != "/docs" {
+		t.Fatalf("expected 301 redirect to /docs, got %d (location: %s)", w.Code, w.Header().Get("Location"))
+	}
+
+	for _, asset := range []string{
+		"/static/swagger/swagger-ui.css",
+		"/static/swagger/swagger-ui-bundle.js",
+		"/static/swagger/swagger-ui-standalone-preset.js",
+	} {
+		w = request(h, "GET", asset, "", "")
+		if w.Code != 200 || len(w.Body.Bytes()) == 0 {
+			t.Fatalf("expected 200 with content for asset %s, got %d (len: %d)", asset, w.Code, len(w.Body.Bytes()))
+		}
+	}
+}

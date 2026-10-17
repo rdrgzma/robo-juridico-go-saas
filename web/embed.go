@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-//go:embed templates/public/*.html templates/auth/*.html templates/app/*.html templates/admin/*.html templates/portal/*.html static/css/*.css static/js/*.js openapi.json
+//go:embed templates/public/*.html templates/auth/*.html templates/app/*.html templates/admin/*.html templates/portal/*.html static/css/*.css static/js/*.js static/swagger/* openapi.json
 var files embed.FS
 var index = template.Must(template.ParseFS(files, "templates/public/index.html"))
 var docs = template.Must(template.ParseFS(files, "templates/public/docs.html"))
@@ -52,6 +52,27 @@ func AppScript(w http.ResponseWriter, r *http.Request) {
 	b, _ := files.ReadFile("static/js/app.js")
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	w.Write(b)
+}
+
+func SwaggerCSS(w http.ResponseWriter, r *http.Request) {
+	b, _ := files.ReadFile("static/swagger/swagger-ui.css")
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write(b)
+}
+
+func SwaggerBundle(w http.ResponseWriter, r *http.Request) {
+	b, _ := files.ReadFile("static/swagger/swagger-ui-bundle.js")
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write(b)
+}
+
+func SwaggerPreset(w http.ResponseWriter, r *http.Request) {
+	b, _ := files.ReadFile("static/swagger/swagger-ui-standalone-preset.js")
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write(b)
 }
 
 // ReportStyle is trusted repository-owned CSS, never user content.

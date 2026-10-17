@@ -1,8 +1,9 @@
-# API — Sprint 2
+# API — Robô Jurídico
 
-Host local autorizado: http://localhost:8081. Contrato completo em /openapi.json;
-página em /docs. Prefixos /v1 e /api/v1 equivalentes. API exige X-API-Key ou Bearer;
-X-API-Key tem precedência. Chaves de organização com escopos; cookies web não autenticam esta API.
+Host local autorizado: http://localhost:8081. Contrato OpenAPI 3.0 completo em `/openapi.json`;
+interface interativa Swagger UI disponível em `/docs` (e redirecionamento em `/swagger`).
+Prefixos `/v1` e `/api/v1` equivalentes. API exige `X-API-Key` ou `Authorization: Bearer`;
+`X-API-Key` tem precedência. Chaves de organização com escopos; cookies web não autenticam esta API.
 
 | Sufixo | Método | Função |
 |---|---|---|

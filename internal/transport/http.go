@@ -74,7 +74,7 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, wo
 			w.Header().Set("X-Frame-Options", "DENY")
 			w.Header().Set("Referrer-Policy", "no-referrer")
 			w.Header().Set("Cache-Control", "no-store")
-			w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 			ww := middleware.NewWrapResponseWriter(w, req.ProtoMajor)
 			next.ServeHTTP(ww, req)
 			elapsed := time.Since(start)
@@ -100,6 +100,12 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, wo
 	})
 	r.Get("/openapi.json", web.OpenAPI)
 	r.Get("/docs", web.Docs)
+	r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs", http.StatusMovedPermanently)
+	})
+	r.Get("/static/swagger/swagger-ui.css", web.SwaggerCSS)
+	r.Get("/static/swagger/swagger-ui-bundle.js", web.SwaggerBundle)
+	r.Get("/static/swagger/swagger-ui-standalone-preset.js", web.SwaggerPreset)
 	r.Get("/health/live", func(w http.ResponseWriter, r *http.Request) {
 		reply(w, 200, map[string]string{"status": "alive", "started_at": started})
 	})
