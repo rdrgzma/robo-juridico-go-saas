@@ -39,7 +39,10 @@ O painel administrativo global da plataforma (`/admin`) está implementado em Go
    - Visão consolidada por organização de consumo mensal, franquia, RPM, eventos concluídos, reservas pendentes, estornos e bloqueios.
    - Emissão de chave com exibição única do segredo bruto, revogação imediata e rotação transacional (`RotateKey` / `AdminRotateKey`) que revoga a chave anterior e emite uma nova preservando organização e escopos.
 
-6. **Gestão jurídica, índices e auditoria (`/admin/operations`, `/admin/indices/sync`, `/admin/audit`)**
+6. **Gestão jurídica, integrações, índices e auditoria (`/admin/operations`, `/admin/integrations`, `/admin/indices/sync`, `/admin/audit`)**
+   - Configuração dinâmica das integrações públicas oficiais: o administrador global pode informar ou atualizar a chave pública oficial do DataJud (CNJ) e habilitar/desabilitar as consultas públicas ao DJEN / Comunica (`comunicaapi.pje.jus.br`) diretamente no painel.
+   - Persistência das configurações na tabela `system_settings` (`datajud_api_key` e `djen_enabled`) com registro em `audit_events` (`admin.integrations_updated`).
+   - Atualização a quente no motor de consultas `juridico.Sources` em memória sem necessidade de reinicializar a aplicação ou os contêineres Docker.
    - Histórico global de consultas e cálculos com filtro por organização e módulo.
    - Sincronização controlada de séries mensais do IPCA (`BCB` / `IBGE`) com validação de lacunas, persistência em `economic_indices` e `index_points` e histórico de execução em `index_sync_runs` (sem desbloquear automaticamente regimes legais não homologados no motor de cálculo).
    - Auditoria pesquisável e paginada por cursor (`before`).

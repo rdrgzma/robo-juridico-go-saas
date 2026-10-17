@@ -43,7 +43,7 @@ func TestPostgreSQLBackupAndRestoreIntegrity(t *testing.T) {
 
 	// Apply migrations on source schema
 	status, err := storage.Migrate(ctx, conn, migrations.Files, true)
-	if err != nil || len(status) != 5 {
+	if err != nil || len(status) != 6 {
 		t.Fatalf("failed applying migrations to source schema: %v", err)
 	}
 

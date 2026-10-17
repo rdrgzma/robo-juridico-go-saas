@@ -297,6 +297,98 @@ func TestAdminUsersIndexSyncAndHTTPPanel(t *testing.T) {
 	}
 }
 
+func TestAdminIntegrationConfigAndLiveUpdate(t *testing.T) {
+	f := identityDatabase(t)
+	globalAdmin, _ := f.user(t, "admin-hq", true)
+	globalAdmin.MFAVerified = true
+	regularOwner, _ := f.user(t, "org-regular", false)
+
+	sources := juridico.NewSources("", false)
+	ws := juridico.New(f.pool, f.service, bytes.Repeat([]byte{4}, 32), sources)
+	adm := admin.New(f.pool, f.service, ws)
+
+	if _, err := adm.GetIntegrationConfig(f.ctx, regularOwner); !errors.Is(err, auth.ErrDenied) {
+		t.Fatalf("expected ErrDenied on GetIntegrationConfig for regular user, got %v", err)
+	}
+	if err := adm.SaveIntegrationConfig(f.ctx, regularOwner, "test-key", true); !errors.Is(err, auth.ErrDenied) {
+		t.Fatalf("expected ErrDenied on SaveIntegrationConfig for regular user, got %v", err)
+	}
+
+	cfg, err := adm.GetIntegrationConfig(f.ctx, globalAdmin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DataJudConfigured || cfg.DJENEnabled {
+		t.Fatalf("expected unconfigured initial state, got %+v", cfg)
+	}
+
+	testKey := "cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=="
+	if err := adm.SaveIntegrationConfig(f.ctx, globalAdmin, testKey, true); err != nil {
+		t.Fatal(err)
+	}
+
+	djConfigured, djenEnabled := ws.Sources().Status()
+	if !djConfigured || !djenEnabled {
+		t.Fatalf("expected sources to be live updated: dj=%v djen=%v", djConfigured, djenEnabled)
+	}
+
+	cfg, err = adm.GetIntegrationConfig(f.ctx, globalAdmin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DataJudAPIKey != testKey || !cfg.DJENEnabled || cfg.DataJudSource != "Banco de dados (persistida)" {
+		t.Fatalf("unexpected persisted config: %+v", cfg)
+	}
+
+	events, _, err := adm.ListAuditEvents(f.ctx, globalAdmin, "", "admin.integrations_updated:djen=true", "", 0)
+	if err != nil || len(events) != 1 {
+		t.Fatalf("expected audit event for admin.integrations_updated, got %+v %v", events, err)
+	}
+
+	srv := httptest.NewUnstartedServer(nil)
+	origin := "http://" + srv.Listener.Addr().String()
+	opts := auth.Options{Origin: origin, DisableMFA: true}
+	authSvc, err := auth.New(f.pool, bytes.Repeat([]byte{9}, 32), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wsHTTP := juridico.New(f.pool, authSvc, bytes.Repeat([]byte{4}, 32), sources)
+	admHTTP := admin.New(f.pool, authSvc, wsHTTP)
+	srv.Config.Handler = transport.NewWithAdmin([32]byte{}, slog.New(slog.NewTextHandler(io.Discard, nil)), authSvc, wsHTTP, admHTTP)
+	srv.Start()
+	defer srv.Close()
+
+	adminClient := loginHTTPClient(t, origin, "admin-hq", globalAdmin.Email, fixturePassword)
+
+	opsPage, err := adminClient.Get(origin + "/admin/operations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrf := csrfFrom(t, httpBody(t, opsPage))
+
+	newKey := "nova-chave-publica-teste"
+	postForm := url.Values{
+		"csrf":            {csrf},
+		"datajud_api_key": {newKey},
+	}
+	postReq, _ := http.NewRequest("POST", origin+"/admin/integrations", strings.NewReader(postForm.Encode()))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postReq.Header.Set("Origin", origin)
+	postResp, err := adminClient.Do(postReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = postResp.Body.Close()
+	if postResp.StatusCode != 303 {
+		t.Fatalf("expected 303 on POST /admin/integrations, got %d", postResp.StatusCode)
+	}
+
+	curKey, curDJEN := wsHTTP.Sources().Config()
+	if curKey != newKey || curDJEN != false {
+		t.Fatalf("expected sources to be updated via HTTP POST, got key=%q djen=%v", curKey, curDJEN)
+	}
+}
+
 func loginHTTPClient(t *testing.T, baseURL, org, email, password string) *http.Client {
 	t.Helper()
 	jar, _ := cookiejar.New(nil)

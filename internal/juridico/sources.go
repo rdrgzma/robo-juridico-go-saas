@@ -61,7 +61,29 @@ func (s *Sources) Status() (datajudConfigured, djenEnabled bool) {
 	if s == nil {
 		return false, false
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return strings.TrimSpace(s.datajudKey) != "", s.djen
+}
+
+func (s *Sources) Config() (datajudKey string, djenEnabled bool) {
+	if s == nil {
+		return "", false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.datajudKey, s.djen
+}
+
+func (s *Sources) UpdateConfig(datajudKey string, djen bool) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.datajudKey = strings.TrimSpace(datajudKey)
+	s.djen = djen
+	s.cache = map[string]cachedQuery{}
 }
 func (s *Sources) fetch(ctx context.Context, method, address string, body []byte, key string, target any) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -155,8 +177,11 @@ func (s *Sources) Query(ctx context.Context, organization string, q Query) (Quer
 }
 func (s *Sources) datajud(ctx context.Context, n cnj.Number) SourceResult {
 	v := SourceResult{Name: "CNJ / DataJud", URL: "https://www.cnj.jus.br/sistemas/datajud/api-publica/", CollectedAt: time.Now().UTC(), Status: "nao_configurado"}
-	if s.datajudKey == "" {
-		v.Notice = "Configure DATAJUD_API_KEY no ambiente para consultar esta fonte."
+	s.mu.Lock()
+	key := s.datajudKey
+	s.mu.Unlock()
+	if key == "" {
+		v.Notice = "Configure DATAJUD_API_KEY no painel ou ambiente para consultar esta fonte."
 		return v
 	}
 	alias := court(n)
@@ -174,7 +199,7 @@ func (s *Sources) datajud(ctx context.Context, n cnj.Number) SourceResult {
 			} `json:"hits"`
 		} `json:"hits"`
 	}
-	if err := s.fetch(ctx, "POST", v.URL, b, s.datajudKey, &data); err != nil {
+	if err := s.fetch(ctx, "POST", v.URL, b, key, &data); err != nil {
 		v.Status = "indisponivel"
 		v.Notice = err.Error()
 		return v
@@ -205,8 +230,11 @@ func (s *Sources) datajud(ctx context.Context, n cnj.Number) SourceResult {
 }
 func (s *Sources) communications(ctx context.Context, n cnj.Number) SourceResult {
 	v := SourceResult{Name: "CNJ / DJEN-Comunica", URL: "https://comunica.pje.jus.br/", CollectedAt: time.Now().UTC(), Status: "nao_configurado"}
-	if !s.djen {
-		v.Notice = "Configure DJEN_ENABLED=true para habilitar esta fonte pública."
+	s.mu.Lock()
+	djenEnabled := s.djen
+	s.mu.Unlock()
+	if !djenEnabled {
+		v.Notice = "Configure DJEN_ENABLED=true no painel ou ambiente para habilitar esta fonte pública."
 		return v
 	}
 	values := url.Values{"numeroProcesso": {n.Digits}, "tamanhoPagina": {"20"}, "pagina": {"1"}}

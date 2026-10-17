@@ -45,7 +45,20 @@ func main() {
 		logger.Error("identity configuration invalid")
 		os.Exit(1)
 	}
-	workspace := juridico.New(pool, identity, cfg.AuthKey, juridico.NewSources(os.Getenv("DATAJUD_API_KEY"), os.Getenv("DJEN_ENABLED") == "true"))
+	datajudKey := os.Getenv("DATAJUD_API_KEY")
+	djenEnabled := os.Getenv("DJEN_ENABLED") == "true"
+	var dbKey, dbDJEN string
+	initCtx, cancelInit := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = pool.QueryRow(initCtx, "SELECT COALESCE((SELECT value FROM system_settings WHERE key='datajud_api_key'), '')").Scan(&dbKey)
+	_ = pool.QueryRow(initCtx, "SELECT COALESCE((SELECT value FROM system_settings WHERE key='djen_enabled'), '')").Scan(&dbDJEN)
+	cancelInit()
+	if dbKey != "" {
+		datajudKey = dbKey
+	}
+	if dbDJEN != "" {
+		djenEnabled = dbDJEN == "true"
+	}
+	workspace := juridico.New(pool, identity, cfg.AuthKey, juridico.NewSources(datajudKey, djenEnabled))
 	adminPanel := admin.New(pool, identity, workspace)
 	portalPanel := portal.New(pool, identity, workspace)
 	server := &http.Server{Addr: cfg.Address, Handler: transport.NewWithPortal(cfg.APIKeyHash, logger, identity, workspace, adminPanel, portalPanel, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}

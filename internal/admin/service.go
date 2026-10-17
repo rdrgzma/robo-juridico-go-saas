@@ -161,9 +161,9 @@ func (s *Service) Dashboard(ctx context.Context, actor tenancy.Principal) (Dashb
 		djenState = "Habilitado (homologação ao vivo pendente)"
 	}
 	d.Integrations = []IntegrationStatus{
-		{Name: "PostgreSQL", Status: "Operacional", Detail: "Pool transacional ativo, migrations 000001..000004 aplicadas"},
-		{Name: "DataJud / CNJ", Status: datajudState, Detail: "Timeout 6s, limite 2 MiB, sem redirecionamentos"},
-		{Name: "DJEN / Comunica", Status: djenState, Detail: "Timeout 6s, limite 2 MiB, sem redirecionamentos"},
+		{Name: "PostgreSQL", Status: "Operacional", Detail: "Pool transacional ativo, migrations 000001..000006 aplicadas"},
+		{Name: "DataJud / CNJ", Status: datajudState, Detail: "Timeout 15s, limite 2 MiB, sem redirecionamentos"},
+		{Name: "DJEN / Comunica", Status: djenState, Detail: "Timeout 15s, limite 2 MiB, sem redirecionamentos"},
 		{Name: "BCB/SGS 433 e IBGE/SIDRA 1737", Status: "Disponível sob comando", Detail: fmt.Sprintf("%d pontos sincronizados em index_points", d.SyncedIndexPoints)},
 	}
 	return d, nil
@@ -1280,4 +1280,136 @@ func (s *Service) SyncIndices(ctx context.Context, actor tenancy.Principal, sour
 		return run, fmt.Errorf("%w: %s", juridico.ErrInput, syncErr)
 	}
 	return run, nil
+}
+
+type IntegrationConfigView struct {
+	DataJudAPIKey     string
+	DataJudConfigured bool
+	DataJudSource     string
+	DJENEnabled       bool
+	DJENSource        string
+	UpdatedAt         string
+	UpdatedByEmail    string
+}
+
+func (s *Service) GetIntegrationConfig(ctx context.Context, actor tenancy.Principal) (IntegrationConfigView, error) {
+	var cfg IntegrationConfigView
+	if err := requireAdmin(actor); err != nil {
+		return cfg, err
+	}
+	liveKey := ""
+	liveDJEN := false
+	if s.workspace != nil && s.workspace.Sources() != nil {
+		liveKey, liveDJEN = s.workspace.Sources().Config()
+	}
+
+	var dbKey, dbDJEN, updatedByEmail string
+	var updatedAt *time.Time
+	rows, err := s.pool.Query(ctx, `SELECT s.key, s.value, s.updated_at, COALESCE(u.email, 'sistema')
+		FROM system_settings s
+		LEFT JOIN users u ON u.id = s.updated_by
+		WHERE s.key IN ('datajud_api_key', 'djen_enabled')`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var k, v, email string
+			var ts time.Time
+			if err := rows.Scan(&k, &v, &ts, &email); err == nil {
+				if k == "datajud_api_key" {
+					dbKey = v
+					if updatedAt == nil || ts.After(*updatedAt) {
+						updatedAt = &ts
+						updatedByEmail = email
+					}
+				} else if k == "djen_enabled" {
+					dbDJEN = v
+					if updatedAt == nil || ts.After(*updatedAt) {
+						updatedAt = &ts
+						updatedByEmail = email
+					}
+				}
+			}
+		}
+	}
+
+	if dbKey != "" {
+		cfg.DataJudAPIKey = dbKey
+		cfg.DataJudConfigured = true
+		cfg.DataJudSource = "Banco de dados (persistida)"
+	} else if liveKey != "" {
+		cfg.DataJudAPIKey = liveKey
+		cfg.DataJudConfigured = true
+		cfg.DataJudSource = "Variável de ambiente (.env)"
+	} else {
+		cfg.DataJudAPIKey = ""
+		cfg.DataJudConfigured = false
+		cfg.DataJudSource = "Não configurada"
+	}
+
+	if dbDJEN != "" {
+		cfg.DJENEnabled = dbDJEN == "true"
+		cfg.DJENSource = "Banco de dados (persistida)"
+	} else {
+		cfg.DJENEnabled = liveDJEN
+		if liveDJEN {
+			cfg.DJENSource = "Variável de ambiente (.env)"
+		} else {
+			cfg.DJENSource = "Desabilitado por padrão"
+		}
+	}
+
+	if updatedAt != nil {
+		cfg.UpdatedAt = updatedAt.Format("02/01/2006 15:04:05")
+		cfg.UpdatedByEmail = updatedByEmail
+	}
+
+	return cfg, nil
+}
+
+func (s *Service) SaveIntegrationConfig(ctx context.Context, actor tenancy.Principal, datajudKey string, djenEnabled bool) error {
+	if err := requireAdmin(actor); err != nil {
+		return err
+	}
+	cleanKey := strings.TrimSpace(datajudKey)
+	cleanKey = strings.TrimPrefix(cleanKey, "APIKey ")
+	djenVal := "false"
+	if djenEnabled {
+		djenVal = "true"
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+
+	if _, err := tx.Exec(ctx, `INSERT INTO system_settings(key, value, updated_at, updated_by)
+		VALUES ('datajud_api_key', $1, now(), $2)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by`,
+		cleanKey, actor.UserID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `INSERT INTO system_settings(key, value, updated_at, updated_by)
+		VALUES ('djen_enabled', $1, now(), $2)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by`,
+		djenVal, actor.UserID); err != nil {
+		return err
+	}
+
+	action := fmt.Sprintf("admin.integrations_updated:djen=%v", djenEnabled)
+	if _, err := tx.Exec(ctx, `INSERT INTO audit_events(organization_id, actor_id, action)
+		VALUES ($1, $2, $3)`, actor.OrganizationID, actor.UserID, action); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.workspace != nil && s.workspace.Sources() != nil {
+		s.workspace.Sources().UpdateConfig(cleanKey, djenEnabled)
+	}
+
+	return nil
 }

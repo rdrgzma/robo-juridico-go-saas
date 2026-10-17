@@ -30,6 +30,7 @@ type page struct {
 	AuditEvents                                                                                                    []AuditEventView
 	Indices                                                                                                        []EconomicIndexView
 	SyncRuns                                                                                                       []IndexSyncRun
+	IntegrationConfig                                                                                              IntegrationConfigView
 	DefaultSyncStart, DefaultSyncEnd, Today                                                                        string
 }
 
@@ -431,11 +432,32 @@ func (s *Service) Mount(r chi.Router) {
 			s.failure(w, err)
 			return
 		}
+		integrationConfig, err := s.GetIntegrationConfig(r.Context(), p)
+		if err != nil {
+			s.failure(w, err)
+			return
+		}
 		s.show(w, r, 200, page{
 			View: "operations", Title: "Gestão jurídica e operacional",
 			Operations: ops, Indices: indices, SyncRuns: runs, Dashboard: d,
+			IntegrationConfig: integrationConfig,
 			OrgFilter: orgFilter, KindFilter: kindFilter,
+			Notice: r.URL.Query().Get("notice"),
 		})
+	}))
+
+	r.Post("/admin/integrations", guard(func(w http.ResponseWriter, r *http.Request) {
+		if !s.identity.ValidateWebForm(w, r) {
+			return
+		}
+		p, _ := tenancy.FromContext(r.Context())
+		key := r.PostForm.Get("datajud_api_key")
+		djen := r.PostForm.Get("djen_enabled") == "true" || r.PostForm.Get("djen_enabled") == "on"
+		if err := s.SaveIntegrationConfig(r.Context(), p, key, djen); err != nil {
+			s.failure(w, err)
+			return
+		}
+		http.Redirect(w, r, "/admin/operations?notice=Configura%C3%A7%C3%B5es+das+fontes+p%C3%BAblicas+oficiais+atualizadas+com+sucesso#integracoes", 303)
 	}))
 
 	r.Post("/admin/indices/sync", guard(func(w http.ResponseWriter, r *http.Request) {

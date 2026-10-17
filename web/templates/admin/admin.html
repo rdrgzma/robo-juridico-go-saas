@@ -58,6 +58,7 @@
       </tbody>
     </table>
   </div>
+  <p class="help"><a href="/admin/operations#integracoes">⚙ Configurar chave pública DataJud e habilitar DJEN diretamente no painel ↗</a></p>
   {{end}}
 
   {{if eq .View "organizations"}}
@@ -434,6 +435,27 @@
 
   {{if eq .View "operations"}}
   <p class="intro">Acompanhamento de consultas e cálculos realizados pelas organizações, estado das integrações oficiais e sincronização controlada de índices econômicos.</p>
+
+  <h2 id="integracoes">Configuração das fontes públicas oficiais (DataJud e DJEN)</h2>
+  <form method="post" action="/admin/integrations">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Chave pública oficial CNJ (DataJud)
+        <input name="datajud_api_key" type="text" value="{{.IntegrationConfig.DataJudAPIKey}}" placeholder="cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==" autocomplete="off" spellcheck="false">
+        <small class="help">Origem: <strong>{{.IntegrationConfig.DataJudSource}}</strong>{{if .IntegrationConfig.UpdatedAt}} · Salva em {{.IntegrationConfig.UpdatedAt}} por {{.IntegrationConfig.UpdatedByEmail}}{{end}}</small>
+      </label>
+      <div style="display:flex;flex-direction:column;justify-content:flex-start;gap:0.5rem">
+        <span style="font-size:0.875rem;font-weight:600">Comunicações processuais</span>
+        <label class="check">
+          <input type="checkbox" name="djen_enabled" value="true" {{if .IntegrationConfig.DJENEnabled}}checked{{end}}>
+          Habilitar consulta pública ao DJEN / Comunica
+        </label>
+        <small class="help">Origem: <strong>{{.IntegrationConfig.DJENSource}}</strong> (comunicaapi.pje.jus.br)</small>
+      </div>
+    </div>
+    <p class="help">A chave pública oficial do DataJud autentica consultas nos clusters dos tribunais (TJMG, TJSP, TRF, etc.). O DJEN permite recuperar comunicações processuais diretamente do CNJ.</p>
+    <button>Salvar configurações de fontes</button>
+  </form>
 
   <h2>Sincronização controlada de índices econômicos (IPCA)</h2>
   <form method="post" action="/admin/indices/sync">
