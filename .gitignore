@@ -11,3 +11,6 @@
 *.dump
 *.pem
 *.key
+.dev-api-key
+/tmp/
+/server

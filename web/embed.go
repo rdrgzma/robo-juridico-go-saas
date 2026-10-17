@@ -6,9 +6,15 @@ import (
 	"net/http"
 )
 
-//go:embed templates/public/index.html static/css/style.css openapi.json
+//go:embed templates/public/*.html static/css/style.css openapi.json
 var files embed.FS
 var index = template.Must(template.ParseFS(files, "templates/public/index.html"))
+var docs = template.Must(template.ParseFS(files, "templates/public/docs.html"))
+
+func Docs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = docs.Execute(w, nil)
+}
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

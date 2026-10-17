@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+.dev-api-key
+bin
+server
+tmp
+coverage*
+*.db
+*.sqlite*
+*.log
+*.dump
+*.pem
+*.key

@@ -1,0 +1,53 @@
+name: robo-juridico-go-saas
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/dev/Dockerfile
+    init: true
+    working_dir: /workspace
+    environment:
+      APP_ENV: development
+      HTTP_ADDR: 0.0.0.0:8080
+      API_KEY_SHA256: ${API_KEY_SHA256:?Execute scripts/dev.ps1 init ou scripts/dev.sh init}
+      DATABASE_URL: postgres://rj_app:${APP_DB_PASSWORD:?Configure .env}@db:5432/rj_saas_dev?sslmode=disable
+      TEST_DATABASE_URL: postgres://rj_test:${TEST_DB_PASSWORD:?Configure .env}@db:5432/rj_saas_test?sslmode=disable
+      GOMODCACHE: /go/pkg/mod
+      GOCACHE: /root/.cache/go-build
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - .:/workspace
+      - go_modules:/go/pkg/mod
+      - go_build:/root/.cache/go-build
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "rj-healthcheck"]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+      start_period: 120s
+    stop_grace_period: 20s
+  db:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_USER: rj_bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure .env}
+      POSTGRES_DB: postgres
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Configure .env}
+      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:?Configure .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/dev/init-db.sh:/docker-entrypoint-initdb.d/01-rj.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rj_bootstrap -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 20s
+volumes:
+  postgres_data:
+  go_modules:
+  go_build:

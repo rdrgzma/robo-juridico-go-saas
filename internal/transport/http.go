@@ -1,13 +1,16 @@
 package transport
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +21,7 @@ import (
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/cnj"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/prazos"
 	"github.com/rdrgzma/robo-juridico-go-saas/web"
+	"github.com/shopspring/decimal"
 )
 
 type gate struct {
@@ -40,7 +44,8 @@ func (g *gate) allow() bool {
 	return true
 }
 
-func New(keyHash [32]byte, logger *slog.Logger) http.Handler {
+func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Context) error) http.Handler {
+	started := time.Now().UTC().Format(time.RFC3339Nano)
 	r := chi.NewRouter()
 	limiter := &gate{}
 	r.Use(middleware.RequestID, middleware.Recoverer)
@@ -71,6 +76,20 @@ func New(keyHash [32]byte, logger *slog.Logger) http.Handler {
 		reply(w, 200, map[string]any{"status": "ok", "sprint": 1, "production_ready": false})
 	})
 	r.Get("/openapi.json", web.OpenAPI)
+	r.Get("/docs", web.Docs)
+	r.Get("/health/live", func(w http.ResponseWriter, r *http.Request) {
+		reply(w, 200, map[string]string{"status": "alive", "started_at": started})
+	})
+	r.Get("/health/ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if len(readiness) == 0 || readiness[0](ctx) != nil {
+			fail(w, r, 503, "nao_pronto", "Banco indisponível ou migrations pendentes")
+			return
+		}
+		reply(w, 200, map[string]string{"status": "ready"})
+	})
+	engine := calculator.NovoEngineCalculo(nil)
 	for _, path := range []string{"/app", "/admin", "/portal"} {
 		r.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			fail(w, r, 503, "modulo_pendente", "Painel aguarda autenticação e isolamento multiempresa nas próximas sprints")
@@ -107,9 +126,22 @@ func New(keyHash [32]byte, logger *slog.Logger) http.Handler {
 				reply(w, 200, n)
 			})
 			// Different paths intentionally avoid claiming compatibility with the richer legacy payloads.
+			api.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				reply(w, 200, map[string]string{"version": "v1", "docs": "/docs"})
+			})
 			api.Post("/simulacoes/liquidacao", handle(calculator.Calculate))
 			api.Post("/simulacoes/financiamento", handle(calculator.Finance))
 			api.Post("/simulacoes/prazos", handle(prazos.Calculate))
+			api.Post("/calculos/financiamento", handle(calculator.CalcularRevisaoFinanciamento))
+			api.Post("/calculos/judicial", handle(func(input calculator.CalculoJudicialRequest) (*calculator.CalculoJudicialResponse, error) {
+				if input.JurosMora.Tipo == calculator.JurosTaxaLegal || input.JurosMora.Tipo == calculator.JurosLei14905 || input.JurosMora.Tipo == calculator.JurosSelic {
+					return nil, fmt.Errorf("regime legal depende de séries oficiais e homologação; não há fallback automático")
+				}
+				return engine.Executar(input)
+			}))
+			api.Get("/calculos/indices", func(w http.ResponseWriter, r *http.Request) {
+				reply(w, 200, map[string]any{"indices": engine.Repositorio().ListarIndices()})
+			})
 		})
 	}
 	return r
@@ -134,6 +166,10 @@ func handle[I any, O any](calculate func(I) (O, error)) http.HandlerFunc {
 			fail(w, r, 400, "json_invalido", "Envie um único objeto JSON")
 			return
 		}
+		if err := boundedDecimals(reflect.ValueOf(input)); err != nil {
+			fail(w, r, 422, "decimal_invalido", err.Error())
+			return
+		}
 		out, err := calculate(input)
 		if err != nil {
 			fail(w, r, 422, "entrada_invalida", err.Error())
@@ -147,6 +183,30 @@ func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func boundedDecimals(value reflect.Value) error {
+	if !value.IsValid() {
+		return nil
+	}
+	if value.Type() == reflect.TypeOf(decimal.Decimal{}) {
+		return calculator.ValidateDecimal(value.Interface().(decimal.Decimal))
+	}
+	switch value.Kind() {
+	case reflect.Struct:
+		for i := 0; i < value.NumField(); i++ {
+			if err := boundedDecimals(value.Field(i)); err != nil {
+				return err
+			}
+		}
+	case reflect.Slice:
+		for i := 0; i < value.Len(); i++ {
+			if err := boundedDecimals(value.Index(i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 func fail(w http.ResponseWriter, r *http.Request, status int, code, message string) {
 	reply(w, status, map[string]any{"erro": map[string]string{"codigo": code, "mensagem": message}, "request_id": middleware.GetReqID(r.Context())})

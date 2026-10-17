@@ -1,0 +1,22 @@
+root = "."
+tmp_dir = "/tmp/rj-air"
+
+[build]
+cmd = "go build -o /tmp/rj-air/server ./cmd/server && go run ./cmd/migrate up"
+bin = "/tmp/rj-air/server"
+include_ext = ["go", "html", "css", "js", "json", "sql"]
+include_file = ["go.mod", "go.sum"]
+exclude_dir = [".git", "bin", "tmp", "docs", "docker"]
+exclude_regex = ["_test.go"]
+delay = 800
+poll = true
+poll_interval = 500
+send_interrupt = true
+kill_delay = "12s"
+stop_on_error = true
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true
