@@ -1,62 +1,72 @@
-# Progresso real
+# Estado real do desenvolvimento
 
-Atualização: 17/10/2026. **Sprint 1 parcial; aplicação SaaS ainda não concluída.**
+Atualizado em 17/10/2026. Sprint 1 de fundação/consolidação e ambiente Docker entregue.
+O produto SaaS completo ainda não está concluído nem autorizado para produção.
 
-## Executado
+## Entregue
 
-- Origem analisada em leitura no commit `12685bbe7a5be048fcaf01332f67503a09b0bee8`.
-- Auditoria de módulos, segurança, contratos e inventário de duplicações: 49 pares,
-  26 blobs idênticos. Não alterado o projeto original.
-- Novo Git independente em main e módulo próprio; nenhum remoto/push.
-- Sem identidade humana no Git local; commits desta entrega usam autor técnico
-  explícito `Codex (local automation) <codex@localhost>` apenas por comando, sem
-  alterar configuração global do usuário.
-- Servidor Chi compilável, templates/estáticos embutidos, health e OpenAPI.
-- Implementações novas limitadas de CNJ, aritmética de liquidação, PRICE/SAC,
-  contagem por calendário e fator de séries completas; regressões sintéticas.
-- API local com dois prefixos, hash de chave, validação, limites e logs JSON.
-- CI com checks, race e govulncheck; build Linux e documentação própria.
-- Rodada local final: fmt, verificação de módulos, vet, testes com cobertura e builds
-  Windows/Linux passaram. Smoke do binário real passou. Govulncheck v1.9.0 não
-  encontrou vulnerabilidades conhecidas. Detalhes e limites em TESTING.md.
+- Git independente em main, módulo Go e recursos próprios; sem acesso ao legado em runtime.
+- Auditoria fixada em 12685bbe7a5be048fcaf01332f67503a09b0bee8 e matriz de migração.
+- Titular autorizou expressamente o reaproveitamento; NOTICE.md registra fontes e adaptações.
+- Docker Compose oficial: app com Air e PostgreSQL 17.11, módulos/build/dados em volumes.
+- Porta host 127.0.0.1:8081 escolhida pelo usuário para preservar o painel legado em 8080.
+- Migrations SQL executáveis via cmd/migrate up/status, checksums/lock/transações.
+- Roles e bancos separados para desenvolvimento/testes; teste recusa banco principal.
+- /docs, /openapi.json, /health/live e /health/ready funcionais; readiness inclui banco/schema.
+- Motores e contratos de cálculo centralizados em Go, importação/exportação CSV/XLSX,
+  tabelas financeiras decimais únicas para PRICE/SAC/GAUSS, CNJ e calendário explícito.
+- Correções das falhas encontradas e testes de regressão exatos/negativos/caracterização.
+- Dockerfile multi-stage com UID/GID 65532 e binários Linux independentes de executáveis Windows.
+- Scripts dev/build e CI operam por Docker; documentação de desenvolvimento e testes.
 
-## Pendências que impedem declarar Sprint 1 integralmente concluída
+## Verificado nesta sessão
 
-- Licença/permissão aplicável aos módulos Go e UI do legado não demonstrada;
-  não foram copiados. A MIT localizada está no subprojeto Python.
-- Não foram portados todos os motores, integrações DataJud/DJEN, memória completa,
-  cronologia de pagamentos, juros compensatórios/legais, GAUSS e planilhas.
-- Faltam fixtures de fontes oficiais e compatibilidade dos contratos antigos.
-- `gh` sem login e ferramenta conectada sem operação de criar repositório: projeto
-  somente local, sem repositório GitHub criado. Instruções no README.
-- Race detector local depende de CGO/compilador C ausentes; workflow Linux configurado
-  mas não executado no GitHub. Não considerar CI remoto aprovado.
+Compose inicializado com app/db saudáveis, migrations aplicadas/reaplicadas,
+testes unitários e PostgreSQL separados, vet, build e race detector Linux passaram.
+Hot reload de Go/HTML/CSS foi exercitado por cmd/devverify e os arquivos foram restaurados.
+Registro sintético de persistência permaneceu após reinicializar o projeto novo.
+Página e /docs foram abertas e conferidas no navegador. Não foi necessário Go ou
+PostgreSQL no Windows para essas operações.
 
-## Etapas futuras
+Govulncheck encontrou duas vulnerabilidades em x/text v0.29.0, dependência indireta
+trazida pelo pgx; atualização para v0.41.0 aplicada. Nova varredura retornou
+No vulnerabilities found. A imagem de desenvolvimento também compila Air com esse
+patch de dependência. Os resultados não equivalem a pentest nem certificação jurídica.
 
-PostgreSQL, migrations, sessões, MFA, RBAC/organizações, franquias transacionais e
-isolamento ainda não existem. Painéis retornam 503; não são interfaces operacionais.
-Não há consultas externas, histórico, certificação, migração SQLite nem deploy.
+## Limites explícitos e próxima sprint
 
-Esta entrega não cumpre ainda os 14 critérios finais do produto. Cumpre a fundação
-independente e uma parte testada do núcleo. Lista de arquivos no Git; comandos e
-resultados efetivos em TESTING.md. Próximo trabalho: fechar lacunas do núcleo e,
-na Sprint 2, introduzir banco e identidade com testes negativos de isolamento.
+- /app, /admin e /portal retornam 503; login, sessões/MFA, usuários, RBAC/tenancy e
+  isolamento serão Sprint 2 e painéis nas Sprints 3 a 5. Organizations é só fundação SQL.
+- DataJud/DJEN, séries oficiais curadas, calendário por tribunal, histórico e laudos
+  serão integrados nas próximas etapas. Não estão simulados como operações reais.
+- O núcleo reaproveitado possui regressões sintéticas e de caracterização. Taxa legal,
+  SELIC e aplicação cronológica de pagamentos intermediários não estão homologadas;
+  a API rejeita esses casos. O seed do legado só existe nos testes.
+- Contratos de cálculo foram reaproveitados com mudanças de segurança documentadas;
+  não há ainda paridade de todos os endpoints CNJ/processos/OAB/importação/webhooks.
+- Nenhum banco legado foi importado. Ferramenta de migração SQLite ainda é futura.
+- GitHub sem autenticação local: remoto e CI remoto não foram publicados/executados.
+- Produção bloqueada e nenhum deploy/VPS/serviço legado foi alterado.
 
-## Arquivos criados
+Os 14 critérios finais do produto continuam sendo critérios das seis sprints, não
+uma promessa de que todos estejam prontos na Sprint 1. Próximo trabalho: autenticação
+e identidade multiempresa, migrations de usuários/roles e testes negativos de isolamento.
 
-| Grupo | Arquivos |
-|---|---|
-| Raiz/configuração | `README.md`, `go.mod`, `go.sum`, `.gitignore`, `.gitattributes`, `.env.example` |
-| Comandos | `cmd/server/main.go`, `cmd/keygen/main.go` |
-| Domínio | `internal/cnj/cnj.go`, `internal/calculator/calculator.go`, `internal/calculator/financing.go`, `internal/prazos/prazos.go`, `internal/indices/series.go` |
-| Infraestrutura | `internal/config/config.go`, `internal/transport/http.go` |
-| Testes | `internal/cnj/cnj_test.go`, `internal/calculator/calculator_test.go`, `internal/prazos/prazos_test.go`, `internal/indices/series_test.go`, `internal/config/config_test.go`, `internal/transport/http_test.go` |
-| Web | `web/embed.go`, `web/openapi.json`, `web/templates/public/index.html`, `web/static/css/style.css` |
-| Build/CI | `scripts/build.sh`, `scripts/build.ps1`, `.github/workflows/ci.yml` |
-| Operação futura | `deploy/README.md`, `migrations/README.md` |
-| Documentação | `docs/AUDITORIA_LEGADO.md`, `docs/legacy-manifest.json`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, `docs/API.md`, `docs/MIGRATION.md`, `docs/DEPLOY.md`, `docs/ROADMAP.md`, `docs/TESTING.md`, `docs/PROGRESS.md` |
+## Arquivos
 
-Binários locais ignorados pelo Git: `bin/robo-juridico.exe` (Windows) e
-`bin/robo-juridico` (Linux/amd64). Recursos web próprios embutidos; nenhum arquivo
-precisa ser buscado no repositório original para executar esses binários.
+Infraestrutura nova: compose.yaml, .air.toml, .dockerignore, docker/dev/Dockerfile,
+docker/dev/init-db.sh, docker/production/Dockerfile, scripts/dev.ps1/dev.sh,
+cmd/devinit, cmd/devverify, cmd/healthcheck, cmd/migrate, internal/storage,
+migrations/000001_foundation.sql e migrations/embed.go.
+
+Núcleo: internal/calculator inclui contratos/engine/juros/correção/encargos,
+financing wrapper e Finance único, importer/exporter/XLSX, validação e testes.
+seed_legacy_test.go nunca é compilado no servidor. CNJ/prazos/indices mantêm seus testes.
+
+Web/transporte: health/readiness, rotas convencionais reaproveitadas, limites decimais,
+web/templates/public/docs.html, OpenAPI e página de estado atualizados.
+Documentação: README, NOTICE, DEVELOPMENT, auditoria, arquitetura, banco, segurança,
+API, migração, deploy, roadmap e TESTING. Inventário exato disponível em git ls-files.
+
+Commits locais usam autor técnico Codex (local automation) <codex@localhost>, por
+comando, pois não há identidade humana configurada. Configuração Git global preservada.

@@ -1,8 +1,6 @@
-# Preparação de implantação
+# Operação futura
 
-Sprint 1 produz binário Linux, mas bloqueia escuta fora de loopback. Não instalar em
-produção nem publicar via Nginx: a autenticação de organizações ainda não existe.
-
-Os arquivos Nginx, systemd, instalação, atualização, backup/restauração e rollback
-serão entregues e testados na Sprint 6 com PostgreSQL e armazenamento definidos.
-Nenhum serviço, banco, volume ou diretório do legado pode ser utilizado.
+O ambiente oficial local está em compose.yaml/docker/dev. A imagem multi-stage de
+runtime está em docker/production/Dockerfile, preparada sem usuário privilegiado.
+O sistema ainda não está homologado para produção. Nenhum deploy foi executado.
+Consulte docs/DEPLOY.md e docs/DEVELOPMENT.md.

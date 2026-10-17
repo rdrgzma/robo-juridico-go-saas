@@ -1,29 +1,30 @@
-# Banco de dados
+# PostgreSQL
 
-**Planejado, ainda não implementado.** Nenhum PostgreSQL foi criado ou conectado.
-Banco futuro exclusivo `robo_juridico_go_saas`, usuário sem privilégios administrativos,
-porta privada. Sem volumes ou credenciais do legado.
+Implementado via pgx v5 e SQL explícito. Compose cria banco exclusivo rj_saas_dev
+com role rj_app e banco rj_saas_test com role rj_test. Bootstrap separado; nenhuma
+porta PostgreSQL publicada; nenhuma credencial ou volume do legado é utilizado.
 
-Sprint 2: `organizations`, `users`, `memberships`, `roles`, `permissions`,
-`role_permissions`, `plans`, `clients`, `subscriptions`, `api_keys`, `quota_periods`,
-`usage_events`, `sessions`, `audit_events`. Sprint 3+: `queries`, `calculations`,
-`reports`, `leads`, `economic_indices`, `index_points`, jobs de sincronização.
+Migration 000001_foundation.sql: organizations, economic_indices e index_points.
+IDs UUID, datas timestamptz, taxas/números-índice numeric, fonte e estado verified.
+Nenhum dado oficial ou de demonstração é inserido automaticamente. O catálogo não
+alimenta ainda o engine HTTP: essa ligação depende da curadoria de séries futuras.
 
-Tabelas privadas terão `organization_id NOT NULL`, índices iniciados pela organização,
-FKs compostas quando apropriado (inclusive organização no vínculo pai-filho), UUIDs,
-datas `timestamptz`, valores `numeric` de precisão definida ou centavos inteiros,
-segredos apenas em hash e metadados JSONB validados. Índices oficiais globais não
-precisam pertencer a cliente; personalizações serão privadas e versionadas.
+schema_migrations registra nome, SHA-256 e instante. Runner serializado por advisory
+lock; SQL e ledger em transação por arquivo. Checksum alterado/arquivo ausente geram
+erro. Falha faz rollback inclusive do DDL; reexecução é idempotente. cmd/migrate up
+aplica; status relata. Readiness verifica conexão e checksum sem executar migrations.
 
-Cotas: bloquear linha do período em transação, reservar com identificador idempotente,
-evitar cobrança dupla e reconciliar reservas interrompidas. Não usar contador em memória
-para franquia contratual. Período de competência precisa de fuso explícito São Paulo.
+Testes criam schemas de nomes aleatórios somente em rj_saas_test e removem apenas
+esses schemas. URL deve ter database=rj_saas_test e user=rj_test; caso contrário,
+suíte recusa. Sem TEST_DATABASE_URL os testes de integração são marcados SKIP; a
+execução oficial no Compose fornece a URL e efetivamente os executa. A role de teste
+não possui CONNECT em rj_saas_dev.
 
-RLS é defesa adicional planejada: `FORCE ROW LEVEL SECURITY`, role da aplicação sem
-`BYPASSRLS` e contexto via `SET LOCAL` em transação; jamais sessão global no pool.
-Administração global deve usar caminho e privilégios separados e auditados.
-Testar conexão reutilizada entre organizações e tentativa de referência cruzada.
+Ainda planejado na Sprint 2: users/memberships, papéis/permissões, planos/clientes,
+assinaturas, chaves/escopos, franquias/consumo, sessões e auditoria. Depois: consultas,
+cálculos/laudos/leads e jobs. Entidades privadas terão organização obrigatória, FKs
+apropriadas e testes negativos. RLS/SET LOCAL em transação será proteção adicional;
+nenhum isolamento multiempresa é declarado implementado apenas pela tabela organizations.
 
-Migrations SQL versionadas com lock e registro de checksum; alterações destrutivas
-exigem plano de rollback e backup. O diretório migrations nesta sprint só documenta
-essa pendência: não há DDL aprovado nem comando migrate funcional.
+Persistência do volume foi exercitada com uma organização sintética de teste antes
+e depois de reiniciar app e db novos. Nenhuma base de produção foi conectada.

@@ -1,97 +1,95 @@
 # Robô Jurídico Go SaaS
 
-Projeto independente iniciado em 17/10/2026. **Entrega inicial da Sprint 1, ainda
-parcial:** núcleo executável e testes; não é uma plataforma SaaS pronta para produção.
-Backend exclusivamente Go. Nenhum código PHP, banco SQLite, HWID, dado de cliente ou
-dependência de execução do legado foi incorporado.
+Sprint 1: fundação independente, ambiente Docker Compose, PostgreSQL e consolidação
+inicial do núcleo Go. Painéis operacionais, autenticação multiempresa e homologação
+jurídica completa serão entregues nas sprints seguintes. Não publicar em produção.
 
-## Executar localmente
+## Iniciar no Windows
 
-Requer Go 1.26+; validado localmente com Go 1.27.2 Windows/amd64.
-O arquivo `.env.example` é uma referência: o programa não carrega `.env` automaticamente.
-
-```powershell
-go mod download
-go run ./cmd/keygen
-# Copie apenas o hash impresso para a variável abaixo; guarde a chave separadamente.
-$env:API_KEY_SHA256 = '<hash gerado>'
-go run ./cmd/server
-```
-
-Em Linux/macOS: `export API_KEY_SHA256='<hash gerado>'`, depois `go run ./cmd/server`.
-Abra `http://127.0.0.1:8080`. A escuta é restrita a IPs de loopback nesta etapa.
+Pré-requisito único de execução: Docker Desktop com engine Linux/WSL2 em funcionamento.
+Não é necessário Go, PostgreSQL ou Nginx no Windows. No diretório deste repositório:
 
 ```powershell
-$headers = @{ 'X-API-Key' = '<chave gerada>' }
-Invoke-RestMethod http://127.0.0.1:8080/v1/cnj/0000001-73.2023.8.26.0100 -Headers $headers
-$body = '{"principal":"1000","fator_correcao":"1.1","taxa_mensal":"1","meses":2,"pagamento":"100","imputar_juros_primeiro":true,"multa_percentual":"10","honorarios_percentual":"10"}'
-Invoke-RestMethod http://127.0.0.1:8080/v1/simulacoes/liquidacao -Method Post -Headers $headers -ContentType application/json -Body $body
+./scripts/dev.ps1 init
+# Gera .env e .dev-api-key aleatórios, sem exibi-los e sem sobrescrever existentes.
+docker compose up -d --build
+docker compose ps
 ```
 
-O exemplo retorna total `1226.40`; é uma fixture aritmética sintética, sem pressupor
-aplicabilidade de regras legais a um processo real.
+WSL2/Linux: `bash scripts/dev.sh init` e os mesmos comandos Docker Compose.
+Depois da primeira inicialização, não repita `init`; os segredos já existem.
 
-## Disponível
+**Endereço autorizado: http://localhost:8081**. O usuário escolheu a porta 8081
+porque 8080 já pertence ao painel legado. Dentro do contêiner o Go escuta 8080;
+no host o Compose publica exclusivamente `127.0.0.1:8081`. Banco sem porta publicada.
 
-- Servidor Chi, encerramento gracioso, timeouts, logs JSON sem conteúdo jurídico.
-- CNJ módulo 97 com rejeição estrita de caracteres e formatos inválidos.
-- Liquidação parametrizada: fator explícito, juros simples/compostos em meses inteiros,
-  um pagamento na data final, imputação configurável, multa e honorários sem cascata.
-- Tabelas PRICE/SAC decimais, saldo zerado e última prestação reconciliada.
-- Prazos por calendário informado, publicação em diário, dias úteis/corridos,
-  dobra, suspensão configurável e memória diária.
-- Fatores mensais de índices com fonte obrigatória e rejeição de lacunas/duplicatas.
-- Dois prefixos REST, chave local obrigatória, limite global local de 60 chamadas/minuto,
-  validação JSON, OpenAPI e página de estado com layout responsivo claro/escuro automático.
-- CI Linux com race detector e análise de vulnerabilidades; script de build Linux.
+| Endereço local | Situação |
+|---|---|
+| `/` | Página de estado da fundação |
+| `/docs` e `/openapi.json` | Documentação e contrato REST |
+| `/health/live` | Processo HTTP ativo |
+| `/health/ready` | PostgreSQL acessível e migrations corretas |
+| `/v1` e `/api/v1` | API autenticada por chave |
+| `/app`, `/admin`, `/portal` | 503 explícito; módulos das próximas sprints |
 
-`/app`, `/admin` e `/portal` retornam **503 módulo pendente**. Não há autenticação web,
-PostgreSQL, isolamento multiempresa, cotas contratuais, integrações DataJud/DJEN,
-importação/exportação, certificação ou deploy público nesta entrega.
+A chave para chamadas locais fica em `.dev-api-key`, ignorada pelo Git. Envie-a em
+`X-API-Key` ou `Authorization: Bearer`. Nunca use senha como chave nem a coloque em URL.
 
-## Verificar
+## Operar exclusivamente por contêiner
 
 ```sh
-go fmt ./...
-go mod verify
-go vet ./...
-go test ./...
-go build ./cmd/server
-go test -race ./... # exige CGO e compilador C compatível
-go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+docker compose logs -f app
+docker compose exec app go run ./cmd/migrate up
+docker compose exec app go run ./cmd/migrate status
+docker compose exec app go test ./...
+docker compose exec app go test -race -count=1 ./...
+docker compose exec app go vet ./...
+docker compose exec app go run ./cmd/devverify
+docker build -f docker/production/Dockerfile -t robo-juridico-go-saas:local .
+docker compose down
 ```
 
-`scripts/build.sh` ou `scripts/build.ps1` gera `bin/robo-juridico` para Linux/amd64.
-Ver evidências efetivamente executadas em [TESTING](docs/TESTING.md).
+`down` preserva os volumes; não usar `down -v` para operação cotidiana. Air aplica
+migrations antes de iniciar/reiniciar o servidor e falha explicitamente se uma delas
+falhar. Alterações Go, HTML, CSS, JS e SQL são observadas por polling; recursos web
+são recompilados e basta atualizar o navegador. Não há live reload de página por websocket.
 
-## Documentação e continuidade
+Go 1.27.2, Air v1.67.4 e PostgreSQL 17.11 estão fixados. Volumes separados para dados,
+módulos e cache de build. `db` é o hostname PostgreSQL; não `localhost` no contêiner.
+O banco `rj_saas_test` e sua role exclusiva impedem a suíte de usar o banco de desenvolvimento.
 
-- [Auditoria do legado e matriz de migração](docs/AUDITORIA_LEGADO.md)
-- [Estado real e pendências](docs/PROGRESS.md)
-- [Arquitetura](docs/ARCHITECTURE.md), [banco](docs/DATABASE.md), [segurança](docs/SECURITY.md)
-- [API e diferenças de contrato](docs/API.md), [OpenAPI](web/openapi.json)
-- [Migração](docs/MIGRATION.md), [deploy](docs/DEPLOY.md), [seis sprints](docs/ROADMAP.md)
+## Núcleo consolidado
 
-## Novo remoto GitHub
+- CNJ estrito módulo 97; calendário de prazos explícito com memória.
+- Liquidação, modelos/aliases do legado, juros, correção e encargos em um pacote Go.
+- Financiamento PRICE/SAC/GAUSS com uma única tabela decimal compartilhada por APIs.
+- Importação CSV/XLSX com limites; exportação CSV/XLSX e proteção de fórmulas CSV.
+- Regressões exatas, caracterização do legado e rejeições dos comportamentos inseguros.
 
-Git inicializado em `main`, sem histórico compartilhado, submodule ou subtree. O CLI
-GitHub não está autenticado e não há ferramenta de criação de repositório disponível
-na conexão desta sessão; nenhum remoto foi criado nem houve push. Depois de autenticar:
+A API `/calculos/judicial` está habilitada para cálculo convencional com
+`SEM_CORRECAO`. Não carrega seeds do legado como índices oficiais. TAXA_LEGAL,
+LEI_14905 e SELIC são bloqueados na API até integrar e homologar séries oficiais.
+Pagamentos intermediários são rejeitados; imputação disponível para pagamento na
+data final. Esses limites fazem parte do contrato, não são correções silenciosas.
+Consultas DataJud/DJEN, séries oficiais, histórico e laudos ainda serão integrados.
+
+## Evidências e documentação
+
+[Desenvolvimento](docs/DEVELOPMENT.md), [testes executados](docs/TESTING.md),
+[progresso](docs/PROGRESS.md), [auditoria](docs/AUDITORIA_LEGADO.md),
+[arquitetura](docs/ARCHITECTURE.md), [banco](docs/DATABASE.md),
+[segurança](docs/SECURITY.md), [API](docs/API.md), [migração](docs/MIGRATION.md),
+[deploy](docs/DEPLOY.md) e [roadmap](docs/ROADMAP.md).
+
+Repositório Git independente em main; origem auditada em
+`12685bbe7a5be048fcaf01332f67503a09b0bee8`. O titular autorizou expressamente o
+reaproveitamento dos fontes nesta conversa em 17/10/2026; ver [proveniência](NOTICE.md).
+Nenhum serviço, banco ou arquivo do sistema antigo foi modificado.
+
+O remoto GitHub continua pendente de autenticação; nenhum push foi realizado.
+Após autenticar e verificar que o destino não existe:
 
 ```sh
-gh auth login
 gh repo create rdrgzma/robo-juridico-go-saas --private --source=. --remote=origin
 git push -u origin main
 ```
-
-Se o repositório já existir, inspecione-o antes de configurar o remoto ou publicar.
-Não adicionar como remoto o projeto `robo-juridico-api`.
-
-## Origem e licença
-
-Análise somente leitura do commit `12685bbe7a5be048fcaf01332f67503a09b0bee8` do
-repositório original. A licença MIT encontrada pertence ao subdiretório Python;
-não foi presumida sua extensão aos projetos Go. Esta entrega usa implementações
-novas das operações selecionadas, sem copiar os motores Go ou os recursos visuais.
-O transplante desses arquivos requer comprovar permissão/licença aplicável e preservar
-os avisos. Nenhuma licença de distribuição do novo projeto foi escolhida pelo agente.

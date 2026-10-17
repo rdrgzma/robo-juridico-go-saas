@@ -1,56 +1,61 @@
-# API REST — Sprint 1
+# API da Sprint 1
 
-Fonte de contrato: `web/openapi.json`, servida em `/openapi.json`. Saúde: `GET /saude`.
-`production_ready:false` é intencional; health é liveness e não readiness PostgreSQL.
+Host local autorizado: http://localhost:8081. Contrato completo em /openapi.json;
+página em /docs. Prefixos /v1 e /api/v1 equivalentes. API exige X-API-Key ou Bearer;
+X-API-Key tem precedência. Chave local gerada, sem sessões ou contas de cliente.
 
-Nos dois prefixos `/v1` e `/api/v1`:
+| Sufixo | Método | Função |
+|---|---|---|
+| /cnj/{numero} | GET | Formato estrito e módulo 97 |
+| /simulacoes/liquidacao | POST | Fator explícito, meses inteiros, pagamento final |
+| /simulacoes/financiamento | POST | Tabela PRICE/SAC/GAUSS compartilhada |
+| /simulacoes/prazos | POST | Calendário informado, memória diária |
+| /calculos/judicial | POST | Contrato Go reaproveitado, correção e juros convencionais |
+| /calculos/financiamento | POST | Contrato revisional e aliases do legado |
+| /calculos/indices | GET | Catálogo habilitado, inicialmente SEM_CORRECAO |
 
-| Método e sufixo | Comportamento |
-|---|---|
-| GET `/cnj/{numero}` | Valida formato e módulo 97, retorna metadados básicos |
-| POST `/simulacoes/liquidacao` | Aritmética parametrizada; strings decimais obrigatórias |
-| POST `/simulacoes/financiamento` | Tabela PRICE/SAC; principal em centavos exatos |
-| POST `/simulacoes/prazos` | Calendário informado, sem seleção automática de tribunal |
+Root do prefixo retorna versão/link da documentação após autenticação. /saude é
+mantido; /health/live independe do banco, /health/ready verifica conexão e checksums.
+Os painéis /app, /admin e /portal continuam 503 até suas sprints.
 
-Autenticação: `X-API-Key` ou `Authorization: Bearer <chave>`. Se ambos forem enviados,
-X-API-Key tem precedência. Chave local única; não há scopes, usuários ou organizações
-nesta sprint. Não usar cookies como autenticação de API. Limite compartilhado de
-60 tentativas/minuto por processo; `429` com `Retry-After:60`.
+Erros: {"erro":{"codigo":"...","mensagem":"..."},"request_id":"..."}.
+400 para JSON inválido/campo extra/mais de 64 KiB; 401 chave; 415 media type;
+422 parâmetros, decimais fora dos limites ou política não homologada; 429 com
+Retry-After para 60 chamadas/minuto globais locais. Não equivale a cota comercial.
 
-Erros: `{"erro":{"codigo":"...","mensagem":"..."},"request_id":"..."}`.
-`400` JSON inválido/campos desconhecidos/corpo acima de 64 KiB; `401` chave inválida;
-`415` content type; `422` entrada fora dos limites; `404` rota; `405` método.
+## Limites e diferenças explícitas
 
-Liquidação arredonda principal corrigido, juros e encargos a centavos. Juros sobre
-principal corrigido por meses inteiros; um pagamento apenas, na data final. Se
-`imputar_juros_primeiro` for falso, aplica primeiro ao principal. Encargos incidem
-sobre o saldo após pagamento, sem encargo sobre encargo. Pagamento excedente é
-rejeitado; fator/valores negativos são rejeitados. `compostos` ausente = falso;
-`meses` ausente = zero. Não há inferência de taxas, datas ou índices oficiais.
+Decimais de simulação em strings, ponto e até 8 casas; contratos do legado aceitam
+representação decimal do DTO, mas rejeitam precisão/expoentes extremos. Valores de
+saída são strings. Nunca comparar dinheiro em float64.
 
-Financiamento calcula tabela única; não compara contrato com mercado. Sistemas
-PRICE/SAC apenas, com taxa zero permitida explicitamente. A última prestação é
-ajustada junto à amortização. Não caracteriza cobrança indevida nem gera laudo.
+A liquidação indexada só habilita SEM_CORRECAO nesta sprint: não há séries oficiais
+carregadas automaticamente. TAXA_LEGAL, LEI_14905 e SELIC retornam 422 na API até
+curadoria e regressão oficiais. O núcleo herdado permanece disponível em biblioteca
+para testes de caracterização, sem alegação de homologação desses regimes.
 
-Prazos: `data_evento` ISO, `dias` 1..365, `modo` UTEIS/CORRIDOS, `intimacao`
-DIRETA/DIARIO. DIARIO publica no primeiro dia útil seguinte. Exclui o evento ou
-publicação, inclui vencimento; vencimento sem expediente prorroga. Feriados devem
-ser fornecidos; fins de semana são excluídos dos úteis. Suspensão 20/dez..20/jan
-somente quando solicitada. Não há catálogo CPC/CLT/tribunal aprovado.
+Pagamentos apenas na data final. Pagamento histórico retorna erro, evitando a
+aproximação antiga que não recalculava os eventos intermediários. Prioridade do
+art. 354 do contrato herdado está limitada à mora e principal e explicitada nos campos
+imputados; casos mais amplos dependem do motor cronológico. Ordenação dos itens não
+muda o pagamento final. Entrada de valor superior ao saldo suportado é rejeitada.
 
-## Diferenças do legado
+Juros convencionais respeitam taxa zero. Meses comerciais usam dias limitados a 30;
+capitalização composta usa potência decimal nos meses inteiros e interpolação linear
+na fração residual. Aplicabilidade e convenção devem ser confirmadas no caso real.
+Encargos seguem o contrato informado, sem inferir se são juridicamente devidos.
 
-Preservados os prefixos e autenticação por cabeçalho. Não foi declarada paridade
-de todos os endpoints. As rotas novas `/simulacoes/*` evitam confundir contratos
-reduzidos com `/calculos/judicial`, `/calculos/financiamento` e `/prazos/calcular`.
-Essas rotas antigas e processos/OAB/webhooks/conta/índices/importações ainda retornam
-404; não são redirecionadas silenciosamente.
+Financiamento: Finance gera uma única tabela para API nova e wrapper revisional;
+última prestação ajustada com amortização. Taxa revisada zero é zero deliberado,
+não vira contratada automaticamente. Aliases de parcelas/taxas foram preservados,
+mas a distinção entre campo omitido e zero ainda exige consumidor explícito. O valor
+comparativo não prova cobrança indevida nem obrigação de restituição.
 
-CNJ mantém o caminho mas está explicitamente em desenvolvimento: retorna
-`numero_original`, `formatado`, `digitos`, `valido`, `ano`, `segmento`,
-`tribunal_codigo`. O legado HTTP usa `ok`, `numero`, `numero_digitos`, tribunal e
-outros metadados; CNJ inválido era 200 e agora é 422. Não substituir a API antiga
-com este binário. O adapter compatível e seus testes ficam pendentes.
+CNJ mantém caminho e parser estrito, porém os campos ainda são os metadados básicos
+formatado/digitos/ano/segmento/tribunal_codigo; inválido é 422, diferentemente do
+handler legado 200/valido:false. Adapter integral aguarda a integração processual.
 
-`/app`, `/admin`, `/portal`: 503 com erro de módulo pendente. A página raiz é apenas
-estado técnico do projeto, não dashboard de operação jurídica.
+CSV/XLSX são serviços Go testados; seus endpoints de upload/exportação completos
+serão ligados ao painel com permissões nas sprints seguintes. Também não existem
+nesta sprint processos/OAB/webhooks/conta/fontes externas e certificação de laudos.
+Não substituir a API antiga com este binário como se houvesse paridade total.

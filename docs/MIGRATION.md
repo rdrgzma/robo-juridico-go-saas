@@ -1,6 +1,6 @@
 # Migração futura
 
-Nenhum banco foi lido, copiado ou importado nesta entrega. Não existe ferramenta de
+Nenhum banco legado foi lido, copiado ou importado nesta entrega. A fundação PostgreSQL nova está em uso local pelo Docker. Não existe ferramenta de
 importação funcional; será construída após mapear o schema real de uma cópia autorizada.
 
 Procedimento previsto:

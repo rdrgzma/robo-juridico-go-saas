@@ -5,6 +5,10 @@ Commit fixado: `12685bbe7a5be048fcaf01332f67503a09b0bee8`.
 
 ## Método e limites
 
+As seções iniciais e a matriz abaixo registram a primeira inspeção. A atualização
+no fim deste arquivo descreve a autorização e a entrega posterior com Docker.
+
+
 Leitura via `git ls-tree` e `git show` em clone auxiliar sem checkout. Nenhuma escrita,
 branch, commit ou push no repositório original. Não foram carregados `.env`, bancos,
 executáveis, credenciais nem dados pessoais. Não houve chamadas reais DataJud/DJEN,
@@ -24,7 +28,7 @@ motores no novo monólito.
 
 ## Matriz de origem, destino, risco e estratégia
 
-| Módulo | Implementação observada | Destino | Risco e estratégia | Estado nesta entrega |
+| Módulo | Implementação observada | Destino | Risco e estratégia | Estado na primeira entrega |
 |---|---|---|---|---|
 | CNJ | G e D `internal/cnj/cnj.go`, testes reais | `internal/cnj` | Remove qualquer não dígito; valida DV sem restringir completamente tribunal. Reescrever parser estrito; homologar mapa de tribunais antes de habilitar fontes | Novo parser/DV e fixtures sintéticas; metadados reduzidos |
 | Liquidação | G/D `internal/calculator/engine.go` | `internal/calculator` | Fator 1 após erro de correção, erro de juros descartado; não transplantar silenciosamente | Novo cálculo parametrizado limitado; motor completo pendente |
@@ -103,8 +107,8 @@ tenancy/RBAC, admin/portal, cotas transacionais, laudos e operação VPS.
 
 **Licença:** apenas `3-api-robo-juridico/api-robo-juridico/LICENSE` foi localizada,
 com MIT e aviso de copyright do projeto Python. Não há licença Go demonstrada pela
-árvore examinada; não extrapolar essa permissão a G ou D. Sem copiar código Go nesta
-entrega. A autorização de reutilização aplicável deve ser documentada antes do porte.
+árvore examinada; não extrapolar essa permissão a G ou D. Na primeira entrega não foi copiado código Go; posteriormente o titular
+autorizou expressamente a reutilização, conforme atualização abaixo. A autorização de reutilização aplicável deve ser documentada antes do porte.
 
 Dependências legadas observadas incluem Chi, shopspring/decimal, SQLite, x/time/rate,
 HTTP com abstração de rede/proxies, Laravel/Filament e cliente QR. O SaaS mantém
@@ -120,3 +124,33 @@ chave própria; DJEN e séries oficiais precisam contratos e disponibilidade val
 4. PostgreSQL/tenancy primeiro; depois persistência e painéis.
 5. Adapters de compatibilidade com testes por endpoint; homologação integrada apenas
    com ambiente segregado e dados sintéticos/anonimizados.
+
+
+## Atualização após autorização e instrução Docker — 17/10/2026
+
+O titular declarou “Sou titular e autorizo a reutilização”. Proveniência dos fontes
+copiados/adaptados registrada em NOTICE.md. A ausência de licença Go na árvore do
+legado deixou de impedir o reaproveitamento autorizado para este projeto.
+
+Motor, modelos, correção/juros/encargos, planilhas e testes foram consolidados em
+internal/calculator. O seed só é compilado nos testes. O financiamento revisional e
+a simulação agora compartilham uma única Finance decimal para PRICE/SAC/GAUSS.
+O parser XLSX foi substituído para suportar células esparsas/inline strings, com limites
+de ZIP/XML/linhas/células. CSV rejeita linhas inválidas e neutraliza texto como fórmula.
+
+Corrigidos: erros de correção/juros propagados, zero convencional preservado, validações
+antes de operações decimais extensas, datas inválidas, alias OK e indexador preenchidos,
+última prestação reconciliada, correção independente do pagamento e imputação final
+independente da ordem dos itens. Pagamentos históricos são rejeitados, evitando herdar
+uma aproximação incorreta; TAXA_LEGAL/SELIC são bloqueadas na API até homologação oficial.
+
+Os testes herdados receberam adaptações explícitas: repositório de caracterização
+usa seed exclusivamente de teste, pagamentos foram movidos à data final permitida e
+SEM_CORRECAO foi excluído da expectativa de fator >1. Não se afirma equivalência
+universal com as contas antigas nem homologação de dados oficiais por esses testes.
+
+Docker Compose é o ambiente oficial. PostgreSQL, migrations/health, banco separado
+para testes e imagem non-root implementados. Porta 8081 autorizada para preservar os
+contêineres legados que já usam 8080/8000; seus horários de início permaneceram iguais.
+Veja TESTING.md para as verificações efetivamente realizadas e PROGRESS.md para o
+limite entre esta fundação e as funcionalidades de sprints posteriores.

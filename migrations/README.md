@@ -1,5 +1,6 @@
-# Migrations
+# Migrations executáveis
 
-Sprint 2 implementará SQL PostgreSQL versionado, transações e o comando cmd/migrate.
-Não há migrations executáveis nesta sprint. Não apontar para bancos do legado.
-Consulte docs/DATABASE.md para o modelo planejado e os testes de isolamento exigidos.
+000001_foundation.sql cria a fundação PostgreSQL. Fontes SQL embutidas no binário.
+Use docker compose exec app go run ./cmd/migrate up ou status. Cada arquivo possui
+checksum e transação; runner usa advisory lock. Falha retorna exit 1 e não é ocultada.
+Não editar arquivo aplicado. Testes usam exclusivamente o banco rj_saas_test.
