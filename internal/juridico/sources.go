@@ -76,7 +76,9 @@ func (s *Sources) fetch(ctx context.Context, method, address string, body []byte
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if key != "" {
-		req.Header.Set("Authorization", "APIKey "+key)
+		trimmedKey := strings.TrimSpace(key)
+		trimmedKey = strings.TrimPrefix(trimmedKey, "APIKey ")
+		req.Header.Set("Authorization", "APIKey "+trimmedKey)
 	}
 	res, err := s.client.Do(req)
 	if err != nil {
