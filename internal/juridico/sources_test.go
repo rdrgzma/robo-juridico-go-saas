@@ -113,3 +113,24 @@ func TestOfficialIndexSmoke(t *testing.T) {
 		}
 	}
 }
+
+func TestDataJudLiveSmoke(t *testing.T) {
+	key := os.Getenv("DATAJUD_API_KEY")
+	if key == "" || os.Getenv("RJ_EXTERNAL_SMOKE") != "1" {
+		t.Skip("opt-in live DataJud check")
+	}
+	s := NewSources(key, false)
+	out, err := s.Query(context.Background(), "smoke-org", Query{Number: "5053283-30.2024.8.13.0079", External: true})
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	for _, src := range out.Sources {
+		if src.Name == "CNJ / DataJud" {
+			t.Logf("DataJud live response: status=%s total=%d notice=%s", src.Status, src.Total, src.Notice)
+			if src.Status != "ok" {
+				t.Fatalf("DataJud query returned non-ok status: %s (notice: %s)", src.Status, src.Notice)
+			}
+		}
+	}
+}
+

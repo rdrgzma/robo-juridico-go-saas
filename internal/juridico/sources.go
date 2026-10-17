@@ -49,11 +49,11 @@ type Sources struct {
 }
 
 func NewSources(datajudKey string, djen bool) *Sources {
-	return NewSourcesWithClient(&http.Client{Timeout: 6 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, datajudKey, djen)
+	return NewSourcesWithClient(&http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, datajudKey, djen)
 }
 func NewSourcesWithClient(client *http.Client, datajudKey string, djen bool) *Sources {
 	if client == nil {
-		client = &http.Client{Timeout: 6 * time.Second}
+		client = &http.Client{Timeout: 15 * time.Second}
 	}
 	return &Sources{client: client, datajudKey: datajudKey, djen: djen, cache: map[string]cachedQuery{}}
 }
@@ -64,7 +64,7 @@ func (s *Sources) Status() (datajudConfigured, djenEnabled bool) {
 	return strings.TrimSpace(s.datajudKey) != "", s.djen
 }
 func (s *Sources) fetch(ctx context.Context, method, address string, body []byte, key string, target any) error {
-	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, address, bytes.NewReader(body))
 	if err != nil {
