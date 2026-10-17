@@ -10,7 +10,7 @@
    das fontes, motor cronológico, políticas legais, calendário por tribunal, sync
    agendado, laudos públicos e visualização de peças não estão concluídos.
 4. Admin: clientes/planos/contratos, usuários/chaves/cotas, sincronização controlada de índices, auditoria e indicadores. Concluída (ver ADMIN.md).
-5. Portal: plano/consumo/chaves, histórico/laudos, documentação e configurações.
+5. Portal: plano/consumo/chaves, histórico/laudos, isolamento multi-tenant, documentos e equipe/sessões. Concluída (ver PORTAL.md).
 6. Homologação e operação: carga/segurança/backup/restore, Nginx/systemd/VPS e alternativa Docker.
 
 A Sprint 1 não significa paridade jurídica completa nem SaaS pronto. Os módulos

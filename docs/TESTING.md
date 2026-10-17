@@ -157,3 +157,16 @@ Testes novos em `tests/integration/admin_test.go`:
 - Sincronização controlada de índices IPCA (`SyncIndices`) com validação de lacunas e gravação em `economic_indices`, `index_points` e `index_sync_runs`.
 - Pesquisa e paginação da trilha de auditoria (`ListAuditEvents`) e renderização autenticada de todas as rotas HTTP de `/admin`.
 
+## Sprint 5 — portal do cliente (/portal), 17/10/2026
+
+Execução em Docker: migration `000005_portal.sql` aplicada (`schema_migrations` com 5
+arquivos), `go fmt ./...`, `go vet ./...`, `go test -race -count=1 ./...` (integração
+PostgreSQL em 52,302s) e `cmd/devverify` passaram com exit 0.
+
+Testes novos em `tests/integration/portal_test.go`:
+- Isolamento multi-tenant e proteção IDOR: consultas e operações de uma organização (Alpha) são invisíveis para outra organização (Beta); tentativas de acesso direto via HTTP a memórias de cálculo (`/portal/history/{id}`), downloads protegidos (`/portal/history/{id}/download/{csv,json,html,xlsx}`) e recálculo (`/portal/history/{id}/recalculate`) por organização não proprietária retornam estritamente `HTTP 404 (Not Found)`.
+- Dashboard e veracidade de métricas: cálculo de saldo disponível honesto (`MonthlyLimit - MonthUsed`), discriminação de chamadas de API concluídas, pendentes, estornadas e gratuitas, e indicador de laudos homologados mantido honestamente em `0`.
+- Regras de planos e chaves de API: organizações em planos sem o recurso `'api'` têm emissão/rotação de chaves bloqueadas no backend (`ErrDenied`); organizações autorizadas executam emissão, rotação atômica (chave antiga revogada, novo segredo bruto gerado com prefixo `rj_` e exposto apenas uma vez) e revogação.
+- Governança de equipe e papéis: atualização de dados da organização (`members:manage`), provisionamento de novos membros, alteração de papel (`owner`, `admin`, `lawyer`, `viewer`), proteção contra rebaixamento do último `owner` ativo e suspensão de membros com revogação imediata de suas sessões na organização. Negação (`403` / `ErrDenied`) para papéis `lawyer` e `viewer` em rotas de gestão de membros.
+- Segurança de conta e sessões: alteração de senha com Argon2id rejeitando senha atual incorreta, incrementando `password_version`, invalidando todas as demais sessões ativas e emitindo novo cookie; listagem de sessões com hash opaco (sem vazar tokens brutos) e revogação pontual e global.
+- Renderização HTTP: verificação com sucesso de todas as rotas autenticadas do portal (`/portal`, `/portal/usage`, `/portal/keys`, `/portal/history`, `/portal/team`, `/portal/security`).

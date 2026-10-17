@@ -42,6 +42,15 @@ func (s *Service) IssueKey(ctx context.Context, p tenancy.Principal, name string
 	if !authorized(ctx, tx, p, "keys:manage") {
 		return key, "", ErrDenied
 	}
+	today := s.now().In(s.location).Format("2006-01-02")
+	var apiAllowed bool
+	if err = tx.QueryRow(ctx, `SELECT (pl.active AND 'api'=ANY(pl.features) AND $2::date>=l.effective_from AND (l.effective_until IS NULL OR $2::date<=l.effective_until))
+ FROM organization_limits l JOIN plans pl ON pl.code=l.plan_code WHERE l.organization_id=$1`, p.OrganizationID, today).Scan(&apiAllowed); err != nil {
+		return key, "", err
+	}
+	if !apiAllowed {
+		return key, "", ErrDenied
+	}
 	var count int
 	if err = tx.QueryRow(ctx, "SELECT count(*) FROM api_keys WHERE organization_id=$1 AND revoked_at IS NULL", p.OrganizationID).Scan(&count); err != nil {
 		return key, "", err
@@ -120,6 +129,15 @@ func (s *Service) RotateKey(ctx context.Context, p tenancy.Principal, id string)
 		return key, "", err
 	}
 	if !authorized(ctx, tx, p, "keys:manage") {
+		return key, "", ErrDenied
+	}
+	today := s.now().In(s.location).Format("2006-01-02")
+	var apiAllowed bool
+	if err = tx.QueryRow(ctx, `SELECT (pl.active AND 'api'=ANY(pl.features) AND $2::date>=l.effective_from AND (l.effective_until IS NULL OR $2::date<=l.effective_until))
+ FROM organization_limits l JOIN plans pl ON pl.code=l.plan_code WHERE l.organization_id=$1`, p.OrganizationID, today).Scan(&apiAllowed); err != nil {
+		return key, "", err
+	}
+	if !apiAllowed {
 		return key, "", ErrDenied
 	}
 	if err = tx.QueryRow(ctx, "SELECT name,scopes FROM api_keys WHERE organization_id=$1 AND id=$2 AND revoked_at IS NULL FOR UPDATE", p.OrganizationID, id).Scan(&key.Name, &key.Scopes); errors.Is(err, pgx.ErrNoRows) {
@@ -239,7 +257,11 @@ func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billabl
 			return access, ErrQuota
 		}
 	}
-	if err = tx.QueryRow(ctx, "INSERT INTO usage_events(organization_id,key_id,period,billable,state,created_at) VALUES($1,$2,$3::date,$4,'pending',$5) RETURNING id::text", p.OrganizationID, keyID, period, billable, now).Scan(&access.EventID); err != nil {
+	eventModule := module
+	if eventModule == "" {
+		eventModule = "api"
+	}
+	if err = tx.QueryRow(ctx, "INSERT INTO usage_events(organization_id,key_id,period,billable,state,module,created_at) VALUES($1,$2,$3::date,$4,'pending',$5,$6) RETURNING id::text", p.OrganizationID, keyID, period, billable, eventModule, now).Scan(&access.EventID); err != nil {
 		return access, err
 	}
 	if _, err = tx.Exec(ctx, "UPDATE api_keys SET last_used_at=$2 WHERE id=$1", keyID, now); err != nil {

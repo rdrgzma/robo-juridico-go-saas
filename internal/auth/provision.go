@@ -193,3 +193,215 @@ func (s *Service) AdminRevokeKey(ctx context.Context, actor tenancy.Principal, i
 	}
 	return tx.Commit(ctx)
 }
+
+type SessionView struct {
+	ID          string
+	OrgSlug     string
+	CreatedAt   time.Time
+	LastSeen    time.Time
+	ExpiresAt   time.Time
+	MFAVerified bool
+	Current     bool
+}
+
+func (s *Service) UserSessions(ctx context.Context, p tenancy.Principal, currentToken string) ([]SessionView, error) {
+	if !p.Can("account:read") || p.RequiresMFA() {
+		return nil, ErrDenied
+	}
+	var currentID string
+	if len(currentToken) == 43 {
+		curHash := Digest(currentToken)
+		curIDBytes := Digest(string(curHash))
+		for _, b := range curIDBytes {
+			const hexChars = "0123456789abcdef"
+			currentID += string([]byte{hexChars[b>>4], hexChars[b&0x0f]})
+		}
+	}
+	rows, err := s.pool.Query(ctx, `SELECT encode(sha256(se.token_hash),'hex'),o.slug,se.created_at,se.last_seen,se.expires_at,se.mfa_verified
+ FROM sessions se JOIN organizations o ON o.id=se.organization_id
+ WHERE se.user_id=$1 AND se.expires_at>$2 AND se.last_seen>$3
+ ORDER BY se.last_seen DESC`, p.UserID, s.now(), s.now().Add(-2*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []SessionView{}
+	for rows.Next() {
+		var v SessionView
+		if err := rows.Scan(&v.ID, &v.OrgSlug, &v.CreatedAt, &v.LastSeen, &v.ExpiresAt, &v.MFAVerified); err != nil {
+			return nil, err
+		}
+		v.Current = v.ID == currentID
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+func (s *Service) RevokeSession(ctx context.Context, p tenancy.Principal, sessionID string) error {
+	if !p.Can("account:read") || p.RequiresMFA() {
+		return ErrDenied
+	}
+	if len(sessionID) != 64 {
+		return ErrNotFound
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	tag, err := tx.Exec(ctx, "DELETE FROM sessions WHERE user_id=$1 AND encode(sha256(token_hash),'hex')=$2", p.UserID, sessionID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return ErrNotFound
+	}
+	if err = audit(ctx, tx, p, "auth.session_revoked", p.UserID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *Service) ChangePassword(ctx context.Context, p tenancy.Principal, currentPassword, newPassword string) (string, error) {
+	if !p.Can("account:read") || p.RequiresMFA() {
+		return "", ErrDenied
+	}
+	newHash, err := HashPassword(newPassword)
+	if err != nil {
+		return "", ErrConflict
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(context.Background())
+	var currentHash string
+	var version int
+	if err = tx.QueryRow(ctx, "SELECT password_hash,password_version FROM users WHERE id=$1 AND active FOR UPDATE", p.UserID).Scan(&currentHash, &version); errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrDenied
+	} else if err != nil {
+		return "", err
+	}
+	if !VerifyPassword(currentHash, currentPassword) {
+		return "", ErrCredentials
+	}
+	version++
+	if _, err = tx.Exec(ctx, "UPDATE users SET password_hash=$2,password_version=$3 WHERE id=$1", p.UserID, newHash, version); err != nil {
+		return "", err
+	}
+	if _, err = tx.Exec(ctx, "DELETE FROM sessions WHERE user_id=$1", p.UserID); err != nil {
+		return "", err
+	}
+	if _, err = tx.Exec(ctx, "DELETE FROM password_resets WHERE user_id=$1", p.UserID); err != nil {
+		return "", err
+	}
+	token, err := s.issueSession(ctx, tx, p, version, p.MFAVerified)
+	if err != nil {
+		return "", err
+	}
+	if err = audit(ctx, tx, p, "auth.password_changed", p.UserID); err != nil {
+		return "", err
+	}
+	return token, tx.Commit(ctx)
+}
+
+func (s *Service) ProvisionMember(ctx context.Context, p tenancy.Principal, email, password, role string) (string, error) {
+	email, err := normalizeEmail(email)
+	if err != nil || !validRole(role) {
+		return "", ErrConflict
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(context.Background())
+	if _, err = tx.Exec(ctx, "SELECT id FROM organizations WHERE id=$1 FOR UPDATE", p.OrganizationID); err != nil {
+		return "", err
+	}
+	if !authorized(ctx, tx, p, "members:manage") {
+		return "", ErrDenied
+	}
+	var actorRole string
+	if err = tx.QueryRow(ctx, "SELECT role_code FROM memberships WHERE organization_id=$1 AND user_id=$2 AND active", p.OrganizationID, p.UserID).Scan(&actorRole); err != nil {
+		return "", ErrDenied
+	}
+	if role == "owner" && actorRole != "owner" {
+		return "", ErrDenied
+	}
+	var userID string
+	err = tx.QueryRow(ctx, "SELECT id::text FROM users WHERE lower(email)=$1 FOR UPDATE", email).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		hash, hashErr := HashPassword(password)
+		if hashErr != nil {
+			return "", ErrConflict
+		}
+		if err = tx.QueryRow(ctx, "INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id::text", email, hash).Scan(&userID); err != nil {
+			return "", err
+		}
+	} else if err != nil {
+		return "", err
+	} else {
+		var existingRole string
+		if e := tx.QueryRow(ctx, "SELECT role_code FROM memberships WHERE organization_id=$1 AND user_id=$2", p.OrganizationID, userID).Scan(&existingRole); e == nil && existingRole == "owner" && actorRole != "owner" {
+			return "", ErrDenied
+		}
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO memberships(organization_id,user_id,role_code,active) VALUES($1,$2,$3,true)
+ ON CONFLICT(organization_id,user_id) DO UPDATE SET role_code=EXCLUDED.role_code,active=true`, p.OrganizationID, userID, role); err != nil {
+		return "", err
+	}
+	if err = audit(ctx, tx, p, "membership.provisioned", userID); err != nil {
+		return "", err
+	}
+	return userID, tx.Commit(ctx)
+}
+
+func (s *Service) SetMemberStatus(ctx context.Context, p tenancy.Principal, userID string, active bool) error {
+	if !uuidPattern.MatchString(userID) {
+		return ErrNotFound
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	if _, err = tx.Exec(ctx, "SELECT id FROM organizations WHERE id=$1 FOR UPDATE", p.OrganizationID); err != nil {
+		return err
+	}
+	if !authorized(ctx, tx, p, "members:manage") {
+		return ErrDenied
+	}
+	var targetRole, actorRole string
+	if err = tx.QueryRow(ctx, "SELECT role_code FROM memberships WHERE organization_id=$1 AND user_id=$2", p.OrganizationID, userID).Scan(&targetRole); errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	if err = tx.QueryRow(ctx, "SELECT role_code FROM memberships WHERE organization_id=$1 AND user_id=$2", p.OrganizationID, p.UserID).Scan(&actorRole); err != nil {
+		return err
+	}
+	if targetRole == "owner" && actorRole != "owner" {
+		return ErrDenied
+	}
+	if !active && targetRole == "owner" {
+		var count int
+		if err = tx.QueryRow(ctx, "SELECT count(*) FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role_code='owner' AND m.active AND u.active", p.OrganizationID).Scan(&count); err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrConflict
+		}
+	}
+	if _, err = tx.Exec(ctx, "UPDATE memberships SET active=$3 WHERE organization_id=$1 AND user_id=$2", p.OrganizationID, userID, active); err != nil {
+		return err
+	}
+	if !active {
+		if _, err = tx.Exec(ctx, "DELETE FROM sessions WHERE organization_id=$1 AND user_id=$2", p.OrganizationID, userID); err != nil {
+			return err
+		}
+	}
+	if err = audit(ctx, tx, p, "membership.status_changed", userID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}

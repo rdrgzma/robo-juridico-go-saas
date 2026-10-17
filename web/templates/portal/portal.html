@@ -1,0 +1,435 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{.Title}} · Portal do Cliente · Robô Jurídico</title><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script></head><body>
+<aside class="sidebar">
+  <a class="brand" href="/portal"><span class="brand-mark">◈</span><span>Robô Jurídico<small>Portal do cliente</small></span></a>
+  <nav aria-label="Portal do cliente">
+    <a href="/portal" {{if eq .View "dashboard"}}aria-current="page"{{end}}>▦ Visão geral e plano</a>
+    <a href="/portal/usage" {{if eq .View "usage"}}aria-current="page"{{end}}>↗ Utilização e cotas</a>
+    <a href="/portal/keys" {{if eq .View "keys"}}aria-current="page"{{end}}>⌗ Chaves de API</a>
+    <a href="/portal/history" {{if or (eq .View "history") (eq .View "operation_detail")}}aria-current="page"{{end}}>▣ Histórico e memórias</a>
+    <a href="/portal/team" {{if eq .View "team"}}aria-current="page"{{end}}>◉ Organização e equipe</a>
+    <a href="/portal/security" {{if eq .View "security"}}aria-current="page"{{end}}>⚿ Conta e segurança</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <a href="/app">Espaço jurídico (/app) ↗</a>
+    {{if .Principal.PlatformAdmin}}<a href="/admin">Administração global (/admin) ↗</a>{{end}}
+    <a href="/account">Identidade (/account) ↗</a>
+    <button type="button" id="theme-toggle">Alternar tema</button>
+    <small>{{.Principal.Organization}} · {{.Principal.Role}}</small>
+  </div>
+</aside>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">PORTAL DA ORGANIZAÇÃO / {{.Principal.Organization}}</p>
+      <h1>{{.Title}}</h1>
+    </div>
+    <span class="environment">Papel: {{.Principal.Role}}</span>
+  </header>
+  {{if .Notice}}<div class="notice">{{.Notice}}</div>{{end}}
+  {{if .Error}}<div class="alert" role="alert">{{.Error}}</div>{{end}}
+  {{if .NewKey}}<div class="notice"><strong>Segredo da chave (exibição única — guarde agora):</strong><pre>{{.NewKey}}</pre></div>{{end}}
+
+  {{if eq .View "dashboard"}}
+  <p class="intro">Autoatendimento operacional da organização <strong>{{.Dashboard.OrgName}}</strong> (<code>{{.Dashboard.OrgSlug}}</code>), com isolamento estrito de dados.</p>
+  <section class="metrics">
+    <article>
+      <span>Plano e situação contratual</span>
+      <strong>{{.Dashboard.PlanName}}</strong>
+      <small>Código: <code>{{.Dashboard.PlanCode}}</code> · {{if .Dashboard.ContractActive}}Contrato vigente{{else}}Fora de vigência / inativo{{end}} · Vigência desde {{.Dashboard.EffectiveFrom}}{{if .Dashboard.EffectiveUntil}} até {{.Dashboard.EffectiveUntil}}{{end}}</small>
+    </article>
+    <article>
+      <span>Franquia mensal e saldo</span>
+      <strong>{{.Dashboard.MonthAvailable}} <small>disponíveis</small></strong>
+      <small>Consumido: {{.Dashboard.MonthUsed}} de {{.Dashboard.MonthlyLimit}} · Bloqueios no mês: {{.Dashboard.MonthBlocked}}</small>
+    </article>
+    <article>
+      <span>Limite de taxa (RPM)</span>
+      <strong>{{.Dashboard.RequestsPerMinute}} <small>req/min</small></strong>
+      <small>Acesso API no plano: {{if .Dashboard.APIAllowed}}Habilitado{{else}}Não incluído{{end}}</small>
+    </article>
+    <article>
+      <span>Consultas no mês</span>
+      <strong>{{.Dashboard.MonthQueries}}</strong>
+      <small>Validação CNJ e séries de índices (gratuitas na franquia)</small>
+    </article>
+    <article>
+      <span>Cálculos no mês</span>
+      <strong>{{.Dashboard.MonthCalculations}}</strong>
+      <small>Liquidação, revisão bancária e prazos processuais</small>
+    </article>
+    <article>
+      <span>Memórias e laudos</span>
+      <strong>{{.Dashboard.MemoryReportsCount}} <small>memórias</small></strong>
+      <small>Laudos oficiais homologados: {{.Dashboard.HomologatedReports}} (módulo não habilitado)</small>
+    </article>
+  </section>
+
+  <h2>Módulos incluídos no plano contratado</h2>
+  <p>{{range $i, $f := .Dashboard.Features}}{{if $i}} · {{end}}<code>{{$f}}</code>{{end}}</p>
+
+  <h2>Últimas operações jurídicas da organização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Módulo</th><th>Título</th><th>Motor</th><th></th></tr></thead>
+      <tbody>
+        {{range .Operations}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td><code>{{.Kind}}</code></td>
+          <td>{{.Title}}</td>
+          <td><code>{{.EngineVersion}}</code></td>
+          <td><a href="/portal/history/{{.ID}}">Memória e downloads →</a></td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">Nenhuma operação jurídica registrada nesta organização.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <a class="button" href="/portal/history">Ver histórico completo →</a>
+    <a class="button secondary" href="/portal/usage">Ver extrato de utilização →</a>
+  </div>
+  {{end}}
+
+  {{if eq .View "usage"}}
+  <p class="intro">Extrato unificado de chamadas da API e operações do painel jurídico da sua organização, indicando operações faturáveis, gratuitas e estornos automáticos por falha.</p>
+  <section class="metrics">
+    <article><span>Consumo faturável no mês</span><strong>{{.Dashboard.MonthUsed}} <small>/ {{.Dashboard.MonthlyLimit}}</small></strong><small>Saldo disponível: {{.Dashboard.MonthAvailable}}</small></article>
+    <article><span>Chamadas de API no mês</span><strong>{{.Dashboard.MonthAPICompleted}} <small>concluídas</small></strong><small>Gratuitas: {{.Dashboard.MonthAPIFree}} · Pendentes: {{.Dashboard.MonthAPIPending}} · Estornadas: {{.Dashboard.MonthAPIRefunded}}</small></article>
+    <article><span>Operações do painel no mês</span><strong>{{.Dashboard.MonthCalculations}} <small>cálculos</small></strong><small>Consultas gratuitas no painel: {{.Dashboard.MonthQueries}}</small></article>
+  </section>
+
+  <form method="get" action="/portal/usage">
+    <div class="form-grid">
+      <label>Origem<select name="source">
+        <option value="">Todas (API + Painel)</option>
+        <option value="api" {{if eq .SourceFilter "api"}}selected{{end}}>Somente API</option>
+        <option value="panel" {{if eq .SourceFilter "panel"}}selected{{end}}>Somente Painel (/app)</option>
+      </select></label>
+      <label>Estado / cobrança<select name="state">
+        <option value="">Todos os estados</option>
+        <option value="completed" {{if eq .StateFilter "completed"}}selected{{end}}>Concluídas (completed)</option>
+        <option value="refunded" {{if eq .StateFilter "refunded"}}selected{{end}}>Falhas estornadas (refunded)</option>
+        <option value="pending" {{if eq .StateFilter "pending"}}selected{{end}}>Em processamento (pending)</option>
+        <option value="free" {{if eq .StateFilter "free"}}selected{{end}}>Operações gratuitas (0 cota)</option>
+      </select></label>
+    </div>
+    <div class="actions"><button>Filtrar utilização</button><a class="button secondary" href="/portal/usage">Limpar filtros</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Origem</th><th>Módulo</th><th>Identificação</th><th>Ator / Chave</th><th>Estado</th><th>HTTP</th><th>Consumo de franquia</th></tr></thead>
+      <tbody>
+        {{range .Usage}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04:05"}}</td>
+          <td><code>{{.Source}}</code></td>
+          <td><code>{{.Module}}</code></td>
+          <td>{{.Description}}</td>
+          <td><code>{{.Actor}}</code></td>
+          <td>
+            {{if eq .State "completed"}}<strong>concluída</strong>{{else if eq .State "refunded"}}<strong>estornada (falha)</strong>{{else}}pendente{{end}}
+          </td>
+          <td>{{if .HTTPStatus}}{{.HTTPStatus}}{{else}}—{{end}}</td>
+          <td>
+            {{if eq .State "refunded"}}0 (estorno automático){{else if .Billable}}1 unidade{{else}}0 (operação gratuita){{end}}
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8">Nenhum registro de utilização encontrado para os filtros informados.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .NextCursor}}
+  <div class="actions">
+    <a class="button secondary" href="/portal/usage?before={{.NextCursor}}&source={{.SourceFilter}}&state={{.StateFilter}}">Registros anteriores →</a>
+  </div>
+  {{end}}
+  {{end}}
+
+  {{if eq .View "keys"}}
+  <p class="intro">Gerencie as chaves de API da organização e consulte exemplos compatíveis com os contratos reais de <code>/api/v1</code>.</p>
+  {{if not .KeysData.APIAllowed}}
+  <div class="alert" role="alert">O plano atual da organização (<strong>{{.KeysData.PlanName}}</strong> — <code>{{.KeysData.PlanCode}}</code>) não inclui o módulo <code>api</code> ou está fora de vigência. Solicite o upgrade contratual para emitir ou utilizar chaves de API.</div>
+  {{end}}
+
+  {{if .CanManageKeys}}
+  <h2>Chaves da organização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nome</th><th>Prefixo</th><th>Escopos</th><th>Criada em</th><th>Último uso</th><th>Estado</th><th>Ações</th></tr></thead>
+      <tbody>
+        {{range .KeysData.Keys}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td><code>{{.Prefix}}</code></td>
+          <td>{{range $i, $s := .Scopes}}{{if $i}}, {{end}}<code>{{$s}}</code>{{end}}</td>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td>{{if .LastUsed}}{{.LastUsed.Format "02/01/2006 15:04"}}{{else}}Nunca utilizada{{end}}</td>
+          <td>{{if .RevokedAt}}Revogada{{else}}Ativa{{end}}</td>
+          <td>
+            {{if not .RevokedAt}}
+            {{if $.KeysData.APIAllowed}}
+            <form method="post" action="/portal/keys/{{.ID}}/rotate" style="display:inline;margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Rotacionar</button>
+            </form>
+            {{end}}
+            <form method="post" action="/portal/keys/{{.ID}}/revoke" style="display:inline;margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Revogar</button>
+            </form>
+            {{else}}<small>Encerrada</small>{{end}}
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="7">Nenhuma chave emitida para esta organização.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  {{if .KeysData.APIAllowed}}
+  <h2>Emitir nova chave de API</h2>
+  <form method="post" action="/portal/keys">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Identificação da chave<input name="name" required maxlength="80" placeholder="Integração ERP / Escritório"></label>
+    <label class="check"><input type="checkbox" name="scope" value="calculations:run" checked> <code>calculations:run</code> (consultas CNJ, índices e cálculos)</label>
+    <label class="check"><input type="checkbox" name="scope" value="account:read" checked> <code>account:read</code> (identidade da chave em /api/v1/me)</label>
+    <button>Emitir chave</button>
+  </form>
+  {{end}}
+  {{else}}
+  <div class="notice">Seu papel atual (<code>{{.Principal.Role}}</code>) permite consultar a documentação técnica abaixo. A emissão, rotação e revogação de chaves são restritas aos papéis <code>owner</code> e <code>admin</code>.</div>
+  {{end}}
+
+  <h2>Documentação rápida e exemplos reais (/api/v1)</h2>
+  <p class="help">Envie o cabeçalho <code>X-API-Key: rj_...</code> (ou <code>Authorization: Bearer rj_...</code>) e <code>Content-Type: application/json</code>. Consulte também a especificação completa em <a href="/docs">/docs</a> e <a href="/openapi.json">/openapi.json</a>.</p>
+  <details open>
+    <summary>Exemplos compatíveis com os contratos reais</summary>
+    <pre># 1. Identidade e organização da chave (escopo account:read, gratuito)
+curl -s http://localhost:8081/api/v1/me \
+  -H "X-API-Key: SUA_CHAVE_AQUI"
+
+# 2. Validação CNJ (escopo calculations:run, gratuito)
+curl -s http://localhost:8081/api/v1/cnj/0000001-73.2023.8.26.0100 \
+  -H "X-API-Key: SUA_CHAVE_AQUI"
+
+# 3. Simulação de liquidação por fator (escopo calculations:run, consome 1 unidade)
+curl -s -X POST http://localhost:8081/api/v1/simulacoes/liquidacao \
+  -H "X-API-Key: SUA_CHAVE_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"principal":"1000.00","fator_correcao":"1.00","taxa_mensal":"1.00","meses":2,"compostos":false,"pagamento":"0.00","imputar_juros_primeiro":true,"multa_percentual":"10.00","honorarios_percentual":"10.00"}'
+
+# 4. Contagem de prazo processual (escopo calculations:run, consome 1 unidade)
+curl -s -X POST http://localhost:8081/api/v1/simulacoes/prazos \
+  -H "X-API-Key: SUA_CHAVE_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"data_evento":"2026-03-02","dias":15,"modo":"UTEIS","intimacao":"DIRETA","feriados":[],"suspender_recesso":false,"dobro":false}'</pre>
+  </details>
+  {{end}}
+
+  {{if eq .View "history"}}
+  <p class="intro">Consultas, memórias de cálculo e exportações pertencentes exclusivamente à organização <strong>{{.Principal.Organization}}</strong>.</p>
+  <form method="get" action="/portal/history">
+    <label>Filtrar por módulo<select name="kind">
+      <option value="">Todos os módulos</option>
+      <option value="judicial" {{if eq .KindFilter "judicial"}}selected{{end}}>Liquidação judicial (judicial)</option>
+      <option value="liquidacao" {{if eq .KindFilter "liquidacao"}}selected{{end}}>Liquidação por fator (liquidacao)</option>
+      <option value="financiamento" {{if eq .KindFilter "financiamento"}}selected{{end}}>Revisão bancária (financiamento)</option>
+      <option value="prazos" {{if eq .KindFilter "prazos"}}selected{{end}}>Prazos processuais (prazos)</option>
+      <option value="cnj" {{if eq .KindFilter "cnj"}}selected{{end}}>Consulta CNJ (cnj)</option>
+      <option value="indices" {{if eq .KindFilter "indices"}}selected{{end}}>Índices econômicos (indices)</option>
+    </select></label>
+    <div class="actions"><button>Filtrar</button><a class="button secondary" href="/portal/history">Limpar</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Módulo</th><th>Título</th><th>Versão do motor</th><th>Ações e downloads</th></tr></thead>
+      <tbody>
+        {{range .Operations}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td><code>{{.Kind}}</code></td>
+          <td><strong>{{.Title}}</strong></td>
+          <td><code>{{.EngineVersion}}</code></td>
+          <td>
+            <a href="/portal/history/{{.ID}}">Detalhes</a> ·
+            <a href="/portal/history/{{.ID}}/download/csv">CSV</a> ·
+            {{if eq .Kind "judicial"}}<a href="/portal/history/{{.ID}}/download/xlsx">XLSX</a> · {{end}}
+            <a href="/portal/history/{{.ID}}/download/json">JSON+HMAC</a> ·
+            <a href="/portal/history/{{.ID}}/download/html">HTML</a>
+            {{if $.CanRunCalculations}} · <a href="/portal/history/{{.ID}}/recalculate">Recalcular</a>{{end}}
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">Nenhum registro encontrado nesta organização.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .NextCursor}}
+  <div class="actions">
+    <a class="button secondary" href="/portal/history?before={{.NextCursor}}&kind={{.KindFilter}}">Registros anteriores →</a>
+  </div>
+  {{end}}
+  {{end}}
+
+  {{if eq .View "operation_detail"}}
+  <p class="intro"><a href="/portal/history">← Voltar ao histórico da organização</a></p>
+  <p class="help">{{.Operation.CreatedAt.Format "02/01/2006 15:04:05 MST"}} · Motor <code>{{.Operation.EngineVersion}}</code> · Módulo <code>{{.Operation.Kind}}</code> · ID <code>{{.Operation.ID}}</code></p>
+  <div class="actions">
+    {{if .CanRunCalculations}}<a class="button" href="/portal/history/{{.Operation.ID}}/recalculate">Recalcular no espaço jurídico</a>{{end}}
+    <a class="button secondary" href="/portal/history/{{.Operation.ID}}/download/csv">Baixar CSV</a>
+    {{if eq .Operation.Kind "judicial"}}<a class="button secondary" href="/portal/history/{{.Operation.ID}}/download/xlsx">Baixar XLSX</a>{{end}}
+    <a class="button secondary" href="/portal/history/{{.Operation.ID}}/download/json">Baixar JSON + HMAC</a>
+    <a class="button secondary" href="/portal/history/{{.Operation.ID}}/download/html">Memória HTML para impressão</a>
+  </div>
+  <div class="notice">Assinatura de integridade HMAC-SHA256: <code>{{.Signature}}</code></div>
+  <details open><summary>Parâmetros de entrada</summary><pre>{{.InputJSON}}</pre></details>
+  <details open><summary>Resultado e memória calculada</summary><pre>{{.ResultJSON}}</pre></details>
+  {{end}}
+
+  {{if eq .View "team"}}
+  <p class="intro">Configurações cadastrais da organização e gestão de membros conforme o seu perfil de acesso (<code>{{.Principal.Role}}</code>).</p>
+
+  <h2>Dados da organização</h2>
+  {{if .CanManageMembers}}
+  <form method="post" action="/portal/organization">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Nome de exibição<input name="name" required maxlength="160" value="{{.Dashboard.OrgName}}"></label>
+      <label>Razão social<input name="legal_name" maxlength="200" value="{{.Dashboard.LegalName}}"></label>
+      <label>CNPJ / CPF<input name="document" maxlength="40" value="{{.Dashboard.Document}}"></label>
+      <label>Responsável<input name="contact_name" maxlength="160" value="{{.Dashboard.ContactName}}"></label>
+      <label>E-mail de contato<input name="contact_email" type="email" maxlength="200" value="{{.Dashboard.ContactEmail}}"></label>
+    </div>
+    <button>Salvar dados da organização</button>
+  </form>
+  {{else}}
+  <section class="metrics">
+    <article><span>Organização</span><strong>{{.Dashboard.OrgName}}</strong><small>{{.Dashboard.LegalName}} {{if .Dashboard.Document}}· {{.Dashboard.Document}}{{end}}</small></article>
+    <article><span>Responsável</span><strong>{{if .Dashboard.ContactName}}{{.Dashboard.ContactName}}{{else}}—{{end}}</strong><small>{{.Dashboard.ContactEmail}}</small></article>
+  </section>
+  {{end}}
+
+  {{if .CanReadMembers}}
+  <h2>Equipe da organização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>E-mail</th><th>Papel</th><th>Estado</th>{{if .CanManageMembers}}<th>Gerenciar</th>{{end}}</tr></thead>
+      <tbody>
+        {{range $m := .Members}}
+        <tr>
+          <td><strong>{{$m.Email}}</strong></td>
+          <td><code>{{$m.Role}}</code></td>
+          <td>{{if $m.Active}}Ativo{{else}}Inativo{{end}}</td>
+          {{if $.CanManageMembers}}
+          <td>
+            <form method="post" action="/portal/members/{{$m.UserID}}/role" style="display:inline-flex;gap:8px;align-items:center;margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <select name="role">
+                <option value="owner" {{if eq $m.Role "owner"}}selected{{end}}>owner</option>
+                <option value="admin" {{if eq $m.Role "admin"}}selected{{end}}>admin</option>
+                <option value="lawyer" {{if eq $m.Role "lawyer"}}selected{{end}}>lawyer</option>
+                <option value="viewer" {{if eq $m.Role "viewer"}}selected{{end}}>viewer</option>
+              </select>
+              <button class="secondary">Salvar papel</button>
+            </form>
+            <form method="post" action="/portal/members/{{$m.UserID}}/status" style="display:inline;margin:0 0 0 8px;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="active" value="{{if $m.Active}}false{{else}}true{{end}}">
+              <button class="secondary">{{if $m.Active}}Desativar{{else}}Reativar{{end}}</button>
+            </form>
+          </td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="notice">A listagem de membros requer a permissão <code>members:read</code> (papéis <code>owner</code>, <code>admin</code> ou <code>lawyer</code>).</div>
+  {{end}}
+
+  {{if .CanManageMembers}}
+  <h2>Adicionar membro à organização</h2>
+  <form method="post" action="/portal/members">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>E-mail do membro<input name="email" type="email" required placeholder="novo.membro@escritorio.com.br"></label>
+      <label>Senha inicial (mín. 12 caracteres; ignorada se a conta já existir)<input name="password" type="password" minlength="12"></label>
+      <label>Papel na organização<select name="role">
+        <option value="lawyer">lawyer</option>
+        <option value="viewer">viewer</option>
+        <option value="admin">admin</option>
+        {{if eq .Principal.Role "owner"}}<option value="owner">owner</option>{{end}}
+      </select></label>
+    </div>
+    <button>Adicionar membro</button>
+  </form>
+  {{end}}
+  {{end}}
+
+  {{if eq .View "security"}}
+  <p class="intro">Gerencie sua senha de acesso, sessões ativas e autenticação em dois fatores (MFA).</p>
+
+  <section class="metrics">
+    <article><span>Conta autenticada</span><strong>{{.Principal.Email}}</strong><small>Organização atual: {{.Principal.Organization}} ({{.Principal.Role}})</small></article>
+    <article><span>Autenticação em 2 fatores (MFA)</span><strong>{{if .Principal.MFAEnabled}}Configurado{{else}}Não configurado{{end}}</strong><small>{{if .Principal.MFAVerified}}Sessão verificada com segundo fator{{else if .Principal.MFADisabled}}Exigência local de MFA desabilitada neste ambiente{{else}}Segundo fator não exigido para este perfil{{end}}</small></article>
+    <article><span>Sessões ativas</span><strong>{{len .Sessions}}</strong><small>Expiração por inatividade em 2h e absoluta em 12h</small></article>
+  </section>
+
+  <div class="actions">
+    <a class="button secondary" href="/account/mfa">Configurar / verificar MFA (TOTP) →</a>
+    <a class="button secondary" href="/forgot">Fluxo de recuperação de senha →</a>
+  </div>
+
+  <h2>Alterar senha de acesso</h2>
+  <form method="post" action="/portal/security/password">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Senha atual<input name="current_password" type="password" required autocomplete="current-password"></label>
+      <label>Nova senha (12 a 128 caracteres)<input name="new_password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
+    </div>
+    <p class="help">Ao alterar a senha, a versão de credencial é incrementada e todas as demais sessões abertas em outros dispositivos são revogadas imediatamente.</p>
+    <button>Atualizar senha</button>
+  </form>
+
+  <h2>Sessões ativas da sua conta</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Organização</th><th>Iniciada em</th><th>Última atividade</th><th>Expira em</th><th>MFA</th><th>Estado</th><th>Ação</th></tr></thead>
+      <tbody>
+        {{range .Sessions}}
+        <tr>
+          <td><code>{{.OrgSlug}}</code></td>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td>{{.LastSeen.Format "02/01/2006 15:04"}}</td>
+          <td>{{.ExpiresAt.Format "02/01/2006 15:04"}}</td>
+          <td>{{if .MFAVerified}}Verificado{{else}}Padrão{{end}}</td>
+          <td>{{if .Current}}<strong>Sessão atual</strong>{{else}}Ativa{{end}}</td>
+          <td>
+            <form method="post" action="/portal/security/sessions/{{.ID}}/revoke" style="margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Revogar</button>
+            </form>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="7">Nenhuma sessão encontrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" action="/portal/security/sessions/revoke-all">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="secondary">Revogar todas as sessões e sair</button>
+  </form>
+  {{end}}
+</main></body></html>

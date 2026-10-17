@@ -246,9 +246,6 @@ func (s *Service) Mount(r chi.Router) {
 	r.Get("/account", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		render(w, 200, view{View: "account", Title: "Minha identidade", Principal: p, CSRF: s.CSRF(token)})
 	}))
-	r.Get("/portal", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
-		render(w, 200, view{View: "account", Title: "Portal autenticado", Principal: p, CSRF: s.CSRF(token), Notice: "A identidade e o acesso estão ativos. As funções operacionais deste painel serão entregues nas sprints seguintes."})
-	}))
 	r.Get("/account/members", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		members, err := s.Members(r.Context(), p)
 		if err != nil {
@@ -400,4 +397,8 @@ func (s *Service) WebAdmin(next http.HandlerFunc) http.HandlerFunc {
 func (s *Service) ValidateWebForm(w http.ResponseWriter, r *http.Request) bool {
 	return s.form(w, r, readCookie(r, sessionCookie), false)
 }
-func (s *Service) WebCSRF(r *http.Request) string { return s.CSRF(readCookie(r, sessionCookie)) }
+func (s *Service) WebCSRF(r *http.Request) string         { return s.CSRF(readCookie(r, sessionCookie)) }
+func (s *Service) WebSessionToken(r *http.Request) string { return readCookie(r, sessionCookie) }
+func (s *Service) SetSessionCookie(w http.ResponseWriter, token string) {
+	s.cookie(w, sessionCookie, token, 12*time.Hour)
+}

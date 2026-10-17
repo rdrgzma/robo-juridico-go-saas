@@ -38,7 +38,16 @@ por cota, sincronização controlada de índices IPCA (BCB/IBGE) em `economic_in
 `index_points` / `index_sync_runs` e auditoria pesquisável e paginada. Migration 000004
 aplicada. Detalhes em ADMIN.md.
 
-Próxima etapa de negócio: Sprint 5, portal de autoatendimento do cliente (`/portal`).
+Sprint 5: /portal entregue com autoatendimento e governança por organização: dashboard do
+cliente com saldo de cota transparente, limites RPM, plano e vigência; histórico unificado
+de consumo (API e painel com paginação por cursor e filtros); gestão e documentação de chaves
+de API com aplicação de permissões de papel e plano, rotação e exibição única de segredo;
+histórico jurídico, recálculo autorizado, memórias com assinatura HMAC e downloads protegidos
+(com isolamento multi-tenant estrito e proteção contra IDOR); gestão de equipe e papéis com
+proteção de último owner; alteração segura de senha com Argon2id, incremento de password_version,
+gestão pontual e revogação global de sessões ativas. Migration 000005 aplicada. Detalhes em PORTAL.md.
+
+Próxima etapa de negócio: Sprint 6, homologação e prontidão operacional (testes de carga, backup/restore, deploy VPS e migração legada somente-leitura).
 Dívida jurídica explícita: séries curadas aplicadas ao motor, regimes legais/SELIC,
 pagamentos cronológicos, feriados por tribunal e laudos homologados. Também faltam
 consulta OAB, paginação integral das fontes, visualização de peças e sync agendado.

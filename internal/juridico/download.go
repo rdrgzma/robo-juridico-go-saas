@@ -21,6 +21,9 @@ func safeCell(s string) string {
 	}
 	return s
 }
+func (s *Service) ServeDownload(w http.ResponseWriter, r *http.Request) {
+	s.download(w, r)
+}
 func (s *Service) download(w http.ResponseWriter, r *http.Request) {
 	p, _ := tenancy.FromContext(r.Context())
 	o, err := s.Get(r.Context(), p, chi.URLParam(r, "id"))
