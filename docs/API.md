@@ -1,8 +1,8 @@
-# API da Sprint 1
+# API — Sprint 2
 
 Host local autorizado: http://localhost:8081. Contrato completo em /openapi.json;
 página em /docs. Prefixos /v1 e /api/v1 equivalentes. API exige X-API-Key ou Bearer;
-X-API-Key tem precedência. Chave local gerada, sem sessões ou contas de cliente.
+X-API-Key tem precedência. Chaves de organização com escopos; cookies web não autenticam esta API.
 
 | Sufixo | Método | Função |
 |---|---|---|
@@ -16,7 +16,7 @@ X-API-Key tem precedência. Chave local gerada, sem sessões ou contas de client
 
 Root do prefixo retorna versão/link da documentação após autenticação. /saude é
 mantido; /health/live independe do banco, /health/ready verifica conexão e checksums.
-Os painéis /app, /admin e /portal continuam 503 até suas sprints.
+Os painéis /app, /admin e /portal exigem autenticação; funções operacionais futuras.
 
 Erros: {"erro":{"codigo":"...","mensagem":"..."},"request_id":"..."}.
 400 para JSON inválido/campo extra/mais de 64 KiB; 401 chave; 415 media type;
@@ -57,5 +57,19 @@ handler legado 200/valido:false. Adapter integral aguarda a integração process
 
 CSV/XLSX são serviços Go testados; seus endpoints de upload/exportação completos
 serão ligados ao painel com permissões nas sprints seguintes. Também não existem
-nesta sprint processos/OAB/webhooks/conta/fontes externas e certificação de laudos.
+nesta sprint processos/OAB/webhooks/fontes externas e certificação de laudos.
 Não substituir a API antiga com este binário como se houvesse paridade total.
+
+## Identidade e consumo
+
+GET /v1/me (ou /api/v1/me) exige chave de organização e account:read; retorna
+user_id, organization_id, organization, email, role, platform_admin, mfa_verified,
+mfa_enabled e permissions. Flags MFA descrevem o principal da chave, não uma sessão
+web autenticada. .dev-api-key é somente compatibilidade para rotas sem estado e
+não permite /me. Para cálculos, exige calculations:run e permissão atual do criador.
+
+Chaves emitidas/revogadas em /account/keys. Erros adicionais: 403 escopo/permissão,
+402 cota mensal, 429 proteção por IP ou limite por organização. Defaults: 1000 POSTs
+de cálculo bem-sucedidos/mês (America/Sao_Paulo), 60 chamadas/minuto compartilhadas.
+Reserva antes de calcular, estorno em falhas; pendências >10min são reconciliadas.
+CNJ/consultas gratuitas registram uso sem débito mensal. Detalhes em AUTH.md.

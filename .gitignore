@@ -14,3 +14,4 @@
 .dev-api-key
 /tmp/
 /server
+/.local/

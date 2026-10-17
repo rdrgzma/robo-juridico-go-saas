@@ -82,3 +82,15 @@ Primeiro build baixa imagens e Air. WSL2 com repo no filesystem Linux costuma re
 latência; o bind em caminho Windows com espaços também foi exercitado nesta sessão.
 Não montar arquivos/volumes da aplicação antiga. `.dockerignore` exclui segredos,
 .git, binários e bancos do contexto de imagem. A imagem de runtime só recebe binários.
+
+## Identidade local (Sprint 2)
+
+Para instalações existentes: `./scripts/dev.ps1 extend` adiciona somente a variável
+AUTH_ENCRYPTION_KEY ausente; depois `docker compose up -d --build --wait` aplica a
+configuração. `docker compose exec app go run ./cmd/identity bootstrap` gera conta
+local em .local/bootstrap.json; preserva bootstrap existente. Acesse
+http://localhost:8081/login e configure MFA. Use a origem canônica PUBLIC_ORIGIN.
+
+Comandos member/outbox e política de segredos em AUTH.md. .local é excluído do Git,
+Docker e Air. HTTP local usa cookie sem Secure; HTTPS o exige. Não regenere a chave
+de criptografia existente: ela protege MFA/outbox. Não existe envio real de e-mail.

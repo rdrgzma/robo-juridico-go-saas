@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/auth"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/config"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/storage"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/transport"
@@ -31,9 +32,30 @@ func main() {
 	}
 	defer pool.Close()
 	ready := func(ctx context.Context) error { return storage.Ready(ctx, pool) }
-	server := &http.Server{Addr: cfg.Address, Handler: transport.New(cfg.APIKeyHash, logger, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
+	identity, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure})
+	if err != nil {
+		logger.Error("identity configuration invalid")
+		os.Exit(1)
+	}
+	server := &http.Server{Addr: cfg.Address, Handler: transport.NewWithIdentity(cfg.APIKeyHash, logger, identity, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				run, cancel := context.WithTimeout(ctx, 10*time.Second)
+				if err := identity.Reconcile(run); err != nil && ctx.Err() == nil {
+					logger.Error("usage reconciliation pending")
+				}
+				cancel()
+			}
+		}
+	}()
 	stopped := make(chan struct{})
 	go func() {
 		defer close(stopped)
@@ -45,7 +67,7 @@ func main() {
 			_ = server.Close()
 		}
 	}()
-	logger.Info("listening", "address", cfg.Address, "sprint", 1)
+	logger.Info("listening", "address", cfg.Address, "sprint", 2)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server", "error", err)
 		os.Exit(1)

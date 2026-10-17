@@ -20,11 +20,13 @@ suíte recusa. Sem TEST_DATABASE_URL os testes de integração são marcados SKI
 execução oficial no Compose fornece a URL e efetivamente os executa. A role de teste
 não possui CONNECT em rj_saas_dev.
 
-Ainda planejado na Sprint 2: users/memberships, papéis/permissões, planos/clientes,
-assinaturas, chaves/escopos, franquias/consumo, sessões e auditoria. Depois: consultas,
-cálculos/laudos/leads e jobs. Entidades privadas terão organização obrigatória, FKs
-apropriadas e testes negativos. RLS/SET LOCAL em transação será proteção adicional;
-nenhum isolamento multiempresa é declarado implementado apenas pela tabela organizations.
+Migration 000002_identity.sql: usuários, memberships, papéis/permissões, sessões,
+códigos de recuperação, resets, outbox criptografado, buckets de proteção, eventos
+de auditoria, chaves/escopos, limites e períodos/eventos de consumo. FKs compostas
+impedem relacionar sessões ou chaves a criadores fora da organização. Reservas e
+estornos são transacionais; concorrência e IDOR têm testes negativos.
+RLS não está habilitado; avaliação e limites em AUTH.md. Planos comerciais,
+assinaturas, cálculos/laudos persistidos e jobs de negócio são etapas futuras.
 
 Persistência do volume foi exercitada com uma organização sintética de teste antes
 e depois de reiniciar app e db novos. Nenhuma base de produção foi conectada.

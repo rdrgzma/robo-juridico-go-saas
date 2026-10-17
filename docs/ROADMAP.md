@@ -1,9 +1,9 @@
 # Seis sprints
 
 1. Fundação: Git independente, auditoria, Docker Compose/PostgreSQL, migrations,
-   hot reload, health checks, motores consolidados e regressão. Entrega desta sprint.
+   hot reload, health checks, motores consolidados e regressão. Concluída.
 2. Autenticação e multiempresa: usuários/memberships, papéis/permissões, sessões,
-   recuperação, MFA administrativo, testes de isolamento e cotas transacionais.
+   recuperação, MFA administrativo, testes de isolamento e cotas transacionais. Concluída; painéis operacionais nas próximas etapas.
 3. Painel jurídico: adaptação autorizada da UI desktop, consultas DataJud/DJEN,
    séries oficiais e curadoria de cálculos, pagamentos cronológicos, histórico,
    calendário por tribunal, laudos e exportação segundo permissões.

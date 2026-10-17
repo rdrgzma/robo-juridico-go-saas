@@ -28,7 +28,7 @@ Os testes locais da primeira entrega sem Docker são históricos; esta rodada os
 
 Race detector que não executava no Windows na primeira entrega agora foi executado
 com sucesso dentro do Linux Docker. CI está configurado com os mesmos comandos por
-Compose, mas não foi executado remotamente, pois ainda não houve publicação no GitHub.
+Compose. Esta evidência da Sprint 1 antecede a publicação; resultados remotos não foram confirmados.
 
 ## Testes significativos
 
@@ -78,3 +78,23 @@ a cobertura por pacote padrão o apresente como zero quando medido em outro paco
 Ainda não testados/implementados: login/CSRF/MFA, isolamento SaaS/IDOR/RLS, fontes reais,
 curadoria jurídica completa, carga, backup/restore, migração SQLite e deploy VPS.
 Não confundir zero vulnerabilidades conhecidas com homologação de segurança ou jurídica.
+
+## Sprint 2 — execução em 17/10/2026
+
+`go fmt ./...`, `go vet ./...`, `go test -race -count=1 ./...` e build do servidor
+executados no app Docker: exit 0. Integração PostgreSQL com race: 46,068s. Ambas as
+migrations aplicadas. cmd/devverify passou: cálculo 1020, reload Go/HTML/CSS e restauração.
+Imagem runtime construída; login real renderizado no navegador. Fluxos completos
+HTTPS via httptest verificam cookies, CSRF/Origin, MFA, logout e separação cookie/API.
+
+Testes adicionais: Argon2/salts/limites, AES/AAD/adulteração, vetores RFC6238,
+expiração absoluta/inatividade, reset único/expirado, revogação global, isolamento de
+membros/chaves, suspensão, downgrade de permissões, último owner concorrente,
+limite de login persistente, teto mensal concorrente, estorno idempotente,
+reconciliação, limite compartilhado e virada do mês em São Paulo.
+
+Govulncheck v1.9.0: exit 0, nenhum símbolo vulnerável ou pacote vulnerável importado.
+Existe advisory de módulo GO-2026-5932 para golang.org/x/crypto/openpgp, pacote
+não importado pela aplicação. x/crypto v0.58.0 é usado para Argon2id; x/text v0.43.0.
+Isso não equivale a ausência de todo advisory de módulo nem substitui pentest.
+CI está configurado; resultados remotos não foram confirmados nesta entrega.

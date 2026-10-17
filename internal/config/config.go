@@ -4,14 +4,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 )
 
 type Config struct {
-	Address     string
-	APIKeyHash  [32]byte
-	Environment string
-	DatabaseURL string
+	Address      string
+	APIKeyHash   [32]byte
+	Environment  string
+	DatabaseURL  string
+	AuthKey      []byte
+	PublicOrigin string
+	CookieSecure bool
 }
 
 func Load() (Config, error) {
@@ -21,7 +25,7 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("APP_ENV obrigatório: development, test ou production")
 	}
 	if c.Environment != "development" {
-		return c, fmt.Errorf("servidor habilitado apenas em development até autenticação multiempresa; test é exclusivo da suíte e production exige homologação")
+		return c, fmt.Errorf("servidor habilitado apenas em development; test é exclusivo da suíte e production exige homologação operacional")
 	}
 	c.DatabaseURL = os.Getenv("DATABASE_URL")
 	if c.DatabaseURL == "" {
@@ -40,5 +44,15 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("configure API_KEY_SHA256 com SHA-256 de chave aleatória (go run ./cmd/keygen)")
 	}
 	copy(c.APIKeyHash[:], b)
+	c.AuthKey, err = hex.DecodeString(os.Getenv("AUTH_ENCRYPTION_KEY"))
+	if err != nil || len(c.AuthKey) != 32 {
+		return c, fmt.Errorf("AUTH_ENCRYPTION_KEY obrigatória: 32 bytes em hexadecimal")
+	}
+	c.PublicOrigin = os.Getenv("PUBLIC_ORIGIN")
+	origin, err := url.Parse(c.PublicOrigin)
+	if err != nil || origin.Host == "" || (origin.Scheme != "http" && origin.Scheme != "https") || (origin.Hostname() != "localhost" && origin.Hostname() != "127.0.0.1" && origin.Hostname() != "::1") {
+		return c, fmt.Errorf("PUBLIC_ORIGIN local explícita obrigatória")
+	}
+	c.CookieSecure = origin.Scheme == "https"
 	return c, nil
 }

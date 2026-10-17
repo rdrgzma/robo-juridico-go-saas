@@ -22,7 +22,10 @@ indexada; não certifica fator nem resultado. A convenção de meses comerciais 
 linear residual está explícita; não há pressuposto de aplicabilidade universal.
 Pagamentos históricos precisam de motor cronológico e são rejeitados nesta etapa.
 
-Pacotes auth/tenancy/admin/portal/juridico serão introduzidos com implementação nas
-sprints seguintes, sem pastas vazias que aparentem recursos completos. Há tabela base
-de organizações, mas ainda não há autorização web/tenancy. Painéis retornam 503.
-Produção bloqueada até autenticação, isolamento e revisão de segurança.
+internal/auth implementa identidade, sessões, MFA, recuperação, RBAC, chaves e cotas;
+internal/tenancy transporta o principal explícito por contexto. cmd/identity provisiona
+contas locais, sem incluir credenciais fixas ou ferramenta no runtime. Web autentica
+por cookie e CSRF; API exige chave, escopo e permissão atual. PostgreSQL persiste
+sessões, auditoria e reservas; o reconciliador recupera reservas abandonadas.
+Painéis operacionais admin/portal/juridico serão desenvolvidos nas próximas sprints.
+Produção bloqueada até homologação operacional. Ver AUTH.md para limites e RLS.

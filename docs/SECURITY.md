@@ -20,11 +20,13 @@ Seed legado só em testes. Erro de correção/juros impede resultado; não há f
 Rotas legais não homologadas rejeitam a requisição. Nenhum resultado do frontend é
 certificado; laudos ainda não são emitidos. Rate limiter local não é franquia de cliente.
 
-Ainda obrigatório antes de produção: Argon2id, sessões opacas/expiração/rotação,
-cookies Secure/HttpOnly/SameSite, CSRF/Origin, proteção login/recuperação, MFA admin,
-RBAC por organização/plano/escopo, cotas transacionais, IDOR/RLS e auditoria persistente.
-Também faltam proteção de downloads, retenção/LGPD e backup/restauração ensaiados.
-APP_ENV=production está bloqueado até esses controles; Dockerfile é preparação de build.
+Sprint 2 implementa Argon2id, sessões opacas revogáveis, CSRF/Origin, MFA global,
+recuperação local, RBAC por organização, chaves com escopos, cotas e auditoria.
+Detalhes, exceção Secure no HTTP local e limites em AUTH.md. Isolamento por filtros
+de organização e FKs compostas testados; RLS não habilitado. Limites de plano são
+fundação SQL, sem cobrança comercial. APP_ENV=production continua bloqueado até
+homologação operacional, proteção de downloads, retenção/LGPD, backup/restore,
+entrega externa de e-mail e revisão de segurança. Build não equivale a deploy.
 
 Para laudos: cálculo no servidor, proveniência e versão do motor, resultado integral
 canônico assinado/HMAC com segredo externo e rotação; frontend jamais prova autenticidade.

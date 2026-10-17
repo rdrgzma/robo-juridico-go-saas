@@ -6,10 +6,13 @@ import (
 	"net/http"
 )
 
-//go:embed templates/public/*.html static/css/style.css openapi.json
+//go:embed templates/public/*.html templates/auth/*.html static/css/style.css openapi.json
 var files embed.FS
 var index = template.Must(template.ParseFS(files, "templates/public/index.html"))
 var docs = template.Must(template.ParseFS(files, "templates/public/docs.html"))
+var identity = template.Must(template.ParseFS(files, "templates/auth/account.html"))
+
+func Auth(w http.ResponseWriter, data any) { _ = identity.Execute(w, data) }
 
 func Docs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

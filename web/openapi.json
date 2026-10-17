@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Robô Jurídico Go — Sprint 1",
-    "version": "0.1.0",
-    "description": "Fundação local em Docker. Host autorizado localhost:8081. API convencional habilitada; regimes legais e painéis dependem das próximas sprints."
+    "version": "0.2.0",
+    "description": "Fundação local em Docker. Host autorizado localhost:8081. API convencional habilitada; regimes legais e painéis dependem das próximas sprints. Sprint 2: chaves por organização, escopos e cotas; cookies não autenticam a API. A chave local não acessa /me."
   },
   "servers": [
     {
@@ -83,14 +83,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -170,14 +169,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -254,14 +252,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -374,14 +371,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -461,14 +457,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -545,14 +540,13 @@
             }
           },
           "429": {
-            "description": "Limite local excedido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -640,7 +634,13 @@
             "description": "Parâmetros inválidos, política não homologada ou série ausente"
           },
           "429": {
-            "description": "Rate limit"
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -683,7 +683,13 @@
             "description": "Parâmetros inválidos, política não homologada ou série ausente"
           },
           "429": {
-            "description": "Rate limit"
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -701,6 +707,12 @@
         "responses": {
           "200": {
             "description": "Catálogo habilitado; somente SEM_CORRECAO nesta sprint"
+          },
+          "403": {
+            "description": "Escopo account:read ou permissão insuficiente"
+          },
+          "429": {
+            "description": "Limite por organização ou IP"
           }
         }
       }
@@ -763,7 +775,13 @@
             "description": "Parâmetros inválidos, política não homologada ou série ausente"
           },
           "429": {
-            "description": "Rate limit"
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -806,7 +824,13 @@
             "description": "Parâmetros inválidos, política não homologada ou série ausente"
           },
           "429": {
-            "description": "Rate limit"
+            "description": "Limite por organização ou IP"
+          },
+          "403": {
+            "description": "Escopo calculations:run ou permissão insuficiente"
+          },
+          "402": {
+            "description": "Cota mensal esgotada"
           }
         }
       }
@@ -824,6 +848,12 @@
         "responses": {
           "200": {
             "description": "Catálogo habilitado; somente SEM_CORRECAO nesta sprint"
+          },
+          "403": {
+            "description": "Escopo account:read ou permissão insuficiente"
+          },
+          "429": {
+            "description": "Limite por organização ou IP"
           }
         }
       }
@@ -868,6 +898,74 @@
           },
           "503": {
             "description": "Dependência indisponível ou migrations inválidas"
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "Identidade da chave de organização (account:read)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Principal da organização",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Principal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Escopo ou permissão insuficiente"
+          },
+          "429": {
+            "description": "Limite de chamadas"
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "summary": "Identidade da chave de organização (account:read)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Principal da organização",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Principal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Escopo ou permissão insuficiente"
+          },
+          "429": {
+            "description": "Limite de chamadas"
           }
         }
       }
@@ -1472,6 +1570,52 @@
         },
         "required": [
           "valor_financiado"
+        ]
+      },
+      "Principal": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "platform_admin": {
+            "type": "boolean"
+          },
+          "mfa_verified": {
+            "type": "boolean"
+          },
+          "mfa_enabled": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "user_id",
+          "organization_id",
+          "organization",
+          "email",
+          "role",
+          "platform_admin",
+          "mfa_verified",
+          "mfa_enabled",
+          "permissions"
         ]
       }
     }

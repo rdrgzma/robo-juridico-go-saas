@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func token() string {
@@ -21,6 +22,31 @@ func main() {
 		fmt.Fprintln(os.Stderr, "devinit permitido apenas em development")
 		os.Exit(1)
 	}
+	if len(os.Args) == 2 && os.Args[1] == "extend" {
+		b, err := os.ReadFile(".env")
+		if err != nil {
+			panic(err)
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "AUTH_ENCRYPTION_KEY=") && strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "AUTH_ENCRYPTION_KEY=")) != "" {
+				fmt.Println("Chave de autenticação existente preservada.")
+				return
+			}
+		}
+		f, err := os.OpenFile(".env", os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			panic(err)
+		}
+		_, err = f.WriteString("\nAUTH_ENCRYPTION_KEY=" + token() + "\n")
+		if err != nil {
+			panic(err)
+		}
+		if err = f.Close(); err != nil {
+			panic(err)
+		}
+		fmt.Println("AUTH_ENCRYPTION_KEY adicionada sem alterar os segredos existentes.")
+		return
+	}
 	for _, p := range []string{".env", ".dev-api-key"} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, "Inicialização recusada: arquivo local já existe; não sobrescrever segredos/volumes")
@@ -28,7 +54,7 @@ func main() {
 		}
 	}
 	key := "rj_" + token()
-	content := fmt.Sprintf("# Exclusivo de desenvolvimento; não versionar.\nPOSTGRES_PASSWORD=%s\nAPP_DB_PASSWORD=%s\nTEST_DB_PASSWORD=%s\nAPI_KEY_SHA256=%x\n", token(), token(), token(), sha256.Sum256([]byte(key)))
+	content := fmt.Sprintf("# Exclusivo de desenvolvimento; não versionar.\nPOSTGRES_PASSWORD=%s\nAPP_DB_PASSWORD=%s\nTEST_DB_PASSWORD=%s\nAPI_KEY_SHA256=%x\nAUTH_ENCRYPTION_KEY=%s\n", token(), token(), token(), sha256.Sum256([]byte(key)), token())
 	if err := os.WriteFile(".dev-api-key", []byte(key+"\n"), 0600); err != nil {
 		panic(err)
 	}

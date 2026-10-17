@@ -1,8 +1,9 @@
 # Robô Jurídico Go SaaS
 
-Sprint 1: fundação independente, ambiente Docker Compose, PostgreSQL e consolidação
-inicial do núcleo Go. Painéis operacionais, autenticação multiempresa e homologação
-jurídica completa serão entregues nas sprints seguintes. Não publicar em produção.
+Sprint 2: autenticação, sessões, usuários, organizações e permissões sobre a fundação
+Go/Docker/PostgreSQL. MFA administrativo, recuperação segura e chaves vinculadas à
+organização com consumo transacional. Painéis operacionais e homologação jurídica
+completa continuam nas próximas sprints. Não publicar em produção.
 
 ## Iniciar no Windows
 
@@ -30,10 +31,31 @@ no host o Compose publica exclusivamente `127.0.0.1:8081`. Banco sem porta publi
 | `/health/live` | Processo HTTP ativo |
 | `/health/ready` | PostgreSQL acessível e migrations corretas |
 | `/v1` e `/api/v1` | API autenticada por chave |
-| `/app`, `/admin`, `/portal` | 503 explícito; módulos das próximas sprints |
+| `/login` | Login por organização, e-mail e senha |
+| `/account` | Identidade, membros, papéis, chaves e MFA |
+| `/app`, `/admin`, `/portal` | Áreas autenticadas; funções operacionais nas próximas sprints |
 
-A chave para chamadas locais fica em `.dev-api-key`, ignorada pelo Git. Envie-a em
+A chave de compatibilidade para simulações locais fica em `.dev-api-key`, ignorada pelo Git.
+Ela não acessa dados privados. Chaves emitidas em `/account/keys` são vinculadas à
+organização, possuem escopos e ficam apenas em hash no banco. Envie-a em
 `X-API-Key` ou `Authorization: Bearer`. Nunca use senha como chave nem a coloque em URL.
+
+## Atualizar da Sprint 1 e acessar
+
+```powershell
+./scripts/dev.ps1 extend
+# Adiciona apenas AUTH_ENCRYPTION_KEY ausente; preserva senhas e chave anteriores.
+docker compose up -d --build --wait
+docker compose exec app go run ./cmd/identity bootstrap
+```
+
+Bootstrap é exclusivo do banco de desenvolvimento e grava credenciais aleatórias em
+`.local/bootstrap.json` (ignorado pelo Git e pelas imagens). Abra `/login`, use a
+organização/e-mail/senha desse arquivo e configure o autenticador; o administrador
+global só entra nas áreas protegidas depois do MFA. Não há senha administrativa fixa.
+Outras contas podem ser provisionadas pelo CLI de desenvolvimento, conforme
+[AUTH.md](docs/AUTH.md). No HTTPS, os cookies são Secure; HTTP local possui exceção
+explícita de desenvolvimento, com bind restrito ao loopback.
 
 ## Operar exclusivamente por contêiner
 
@@ -75,7 +97,7 @@ Consultas DataJud/DJEN, séries oficiais, histórico e laudos ainda serão integ
 
 ## Evidências e documentação
 
-[Desenvolvimento](docs/DEVELOPMENT.md), [testes executados](docs/TESTING.md),
+[Autenticação e isolamento](docs/AUTH.md), [desenvolvimento](docs/DEVELOPMENT.md), [testes executados](docs/TESTING.md),
 [progresso](docs/PROGRESS.md), [auditoria](docs/AUDITORIA_LEGADO.md),
 [arquitetura](docs/ARCHITECTURE.md), [banco](docs/DATABASE.md),
 [segurança](docs/SECURITY.md), [API](docs/API.md), [migração](docs/MIGRATION.md),
@@ -86,8 +108,9 @@ Repositório Git independente em main; origem auditada em
 reaproveitamento dos fontes nesta conversa em 17/10/2026; ver [proveniência](NOTICE.md).
 Nenhum serviço, banco ou arquivo do sistema antigo foi modificado.
 
-O remoto GitHub continua pendente de autenticação; nenhum push foi realizado.
-Após autenticar e verificar que o destino não existe:
+Remoto configurado: https://github.com/rdrgzma/robo-juridico-go-saas.git. A Sprint 1
+foi publicada em main. Comandos abaixo são apenas referência para uma instalação
+que ainda não tenha remoto; não recriar um repositório existente:
 
 ```sh
 gh repo create rdrgzma/robo-juridico-go-saas --private --source=. --remote=origin

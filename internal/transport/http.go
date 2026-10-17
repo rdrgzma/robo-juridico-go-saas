@@ -2,8 +2,6 @@ package transport
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,15 +9,16 @@ import (
 	"mime"
 	"net/http"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/auth"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/calculator"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/cnj"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/prazos"
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/tenancy"
 	"github.com/rdrgzma/robo-juridico-go-saas/web"
 	"github.com/shopspring/decimal"
 )
@@ -45,6 +44,12 @@ func (g *gate) allow() bool {
 }
 
 func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Context) error) http.Handler {
+	return newRouter(keyHash, logger, nil, readiness...)
+}
+func NewWithIdentity(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, readiness ...func(context.Context) error) http.Handler {
+	return newRouter(keyHash, logger, identity, readiness...)
+}
+func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, readiness ...func(context.Context) error) http.Handler {
 	started := time.Now().UTC().Format(time.RFC3339Nano)
 	r := chi.NewRouter()
 	limiter := &gate{}
@@ -73,7 +78,7 @@ func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Contex
 	r.Get("/", web.Index)
 	r.Get("/static/style.css", web.Style)
 	r.Get("/saude", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"status": "ok", "sprint": 1, "production_ready": false})
+		reply(w, 200, map[string]any{"status": "ok", "sprint": 2, "production_ready": false})
 	})
 	r.Get("/openapi.json", web.OpenAPI)
 	r.Get("/docs", web.Docs)
@@ -90,32 +95,25 @@ func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Contex
 		reply(w, 200, map[string]string{"status": "ready"})
 	})
 	engine := calculator.NovoEngineCalculo(nil)
-	for _, path := range []string{"/app", "/admin", "/portal"} {
-		r.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-			fail(w, r, 503, "modulo_pendente", "Painel aguarda autenticação e isolamento multiempresa nas próximas sprints")
-		})
+	if identity != nil {
+		identity.Mount(r)
+	} else {
+		for _, path := range []string{"/app", "/admin", "/portal"} {
+			r.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				fail(w, r, 503, "modulo_pendente", "Painel aguarda autenticação e isolamento multiempresa nas próximas sprints")
+			})
+		}
 	}
 	for _, prefix := range []string{"/v1", "/api/v1"} {
 		r.Route(prefix, func(api chi.Router) {
-			api.Use(func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if !limiter.allow() {
-						w.Header().Set("Retry-After", "60")
-						fail(w, r, 429, "limite_excedido", "Limite local de 60 requisições por minuto")
-						return
-					}
-					key := r.Header.Get("X-API-Key")
-					if key == "" {
-						key = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-					}
-					h := sha256.Sum256([]byte(key))
-					zero := [32]byte{}
-					if key == "" || len(key) > 200 || keyHash == zero || subtle.ConstantTimeCompare(h[:], keyHash[:]) != 1 {
-						fail(w, r, 401, "nao_autorizado", "Chave de API inválida")
-						return
-					}
-					next.ServeHTTP(w, r)
-				})
+			api.Use(apiAuthentication(keyHash, logger, identity, limiter))
+			api.Get("/me", func(w http.ResponseWriter, r *http.Request) {
+				p, ok := tenancy.FromContext(r.Context())
+				if !ok {
+					fail(w, r, 403, "organizacao_obrigatoria", "Use uma chave vinculada à organização")
+					return
+				}
+				reply(w, 200, p)
 			})
 			api.Get("/cnj/{numero}", func(w http.ResponseWriter, r *http.Request) {
 				n, err := cnj.Parse(chi.URLParam(r, "numero"))

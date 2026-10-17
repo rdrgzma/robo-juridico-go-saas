@@ -5,7 +5,7 @@ em docker/production/Dockerfile: binários server/migrate/healthcheck com CGO=0,
 -trimpath e -ldflags=-s -w, Debian slim com CA/tzdata e usuário 65532:65532.
 Imagem construída e UID conferido localmente. Nenhum segredo ou fonte no runtime.
 
-O servidor continua recusando production até autenticação e isolamento homologados.
+O servidor continua recusando production até homologação operacional e jurídica, mesmo com identidade implementada.
 Não houve deploy público nem alteração de VPS/domínio/Nginx/systemd/firewall antigos.
 
 scripts/build.ps1 e build.sh compilam binário Linux pelo contêiner app; dev.ps1 build

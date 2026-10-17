@@ -53,15 +53,15 @@ func TestMigrationsOnEmptyDatabaseAndIdempotency(t *testing.T) {
 	ctx, conn, _ := testDatabase(t)
 	for i := 0; i < 2; i++ {
 		status, err := storage.Migrate(ctx, conn, migrations.Files, true)
-		if err != nil || len(status) != 1 || !status[0].Applied {
+		if err != nil || len(status) != 2 || !status[0].Applied || !status[1].Applied {
 			t.Fatalf("migration: %+v %v", status, err)
 		}
 	}
 	var count int
-	if err := conn.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 1 {
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 2 {
 		t.Fatal(count, err)
 	}
-	if _, err := conn.Exec(ctx, "INSERT INTO organizations(name) VALUES($1)", "Fixture persistente na transação de teste"); err != nil {
+	if _, err := conn.Exec(ctx, "INSERT INTO organizations(slug,name) VALUES('fixture',$1)", "Fixture persistente na transação de teste"); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM organizations").Scan(&count); err != nil || count != 1 {
@@ -127,7 +127,7 @@ func TestConcurrentMigrationRunners(t *testing.T) {
 		}
 	}
 	var count int
-	if err := first.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 1 {
+	if err := first.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 2 {
 		t.Fatal(count, err)
 	}
 }
