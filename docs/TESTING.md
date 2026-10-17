@@ -98,3 +98,13 @@ Existe advisory de módulo GO-2026-5932 para golang.org/x/crypto/openpgp, pacote
 não importado pela aplicação. x/crypto v0.58.0 é usado para Argon2id; x/text v0.43.0.
 Isso não equivale a ausência de todo advisory de módulo nem substitui pentest.
 CI está configurado; resultados remotos não foram confirmados nesta entrega.
+
+## Atalhos locais — 17/10/2026
+
+Testes com race para carregador e integração dos cinco perfis passaram. Sem arquivo/
+fora do ambiente e banco de desenvolvimento, atalhos desativados; rota ausente.
+Senhas ausentes no HTML, CSRF inválido e Fetch Metadata cross-site recusados, papéis
+preservados e administrador global redirecionado ao MFA. Testes HTTPS de login/MFA
+existentes e go vet passaram. No navegador interno, os cinco botões foram conferidos
+e o atalho Advogado abriu a conta com papel lawyer. Compatibilidade Origin null
+restrita ao desenvolvimento loopback habilitado documentada em AUTH.md.

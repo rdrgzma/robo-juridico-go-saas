@@ -78,6 +78,33 @@ func run() error {
 			return err
 		}
 		fmt.Println("Conta local criada; credenciais aleatórias em", path, ". MFA obrigatório no primeiro acesso.")
+	case "shortcuts":
+		const path = ".local/development-logins.json"
+		if _, err := os.Stat(path); err == nil {
+			fmt.Println("Atalhos existentes preservados em", path)
+			return nil
+		}
+		b, err := os.ReadFile(".local/bootstrap.json")
+		if err != nil {
+			return fmt.Errorf("execute identity bootstrap primeiro")
+		}
+		var bootstrap auth.DevelopmentLogin
+		if err = json.Unmarshal(b, &bootstrap); err != nil {
+			return err
+		}
+		accounts := map[string]auth.DevelopmentLogin{"platform_admin": bootstrap}
+		for _, role := range []string{"owner", "admin", "lawyer", "viewer"} {
+			suffix := fmt.Sprintf("%x", auth.Digest(auth.RandomToken()))[:12]
+			credential := auth.DevelopmentLogin{Organization: bootstrap.Organization, Email: role + "-" + suffix + "@example.test", Password: auth.RandomToken()}
+			if _, err = service.CreateDevelopmentMember(ctx, credential.Organization, credential.Email, credential.Password, role); err != nil {
+				return err
+			}
+			accounts[role] = credential
+		}
+		if err = save(path, accounts); err != nil {
+			return err
+		}
+		fmt.Println("Cinco atalhos locais preparados em", path, "; reinicie somente o app novo para carregar.")
 	case "member":
 		flags := flag.NewFlagSet("member", flag.ContinueOnError)
 		org := flags.String("organization", "", "slug")

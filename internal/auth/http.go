@@ -26,6 +26,7 @@ type view struct {
 	Members                                                            []Member
 	Keys                                                               []Key
 	Codes                                                              []string
+	DevelopmentLogins                                                  []DevelopmentShortcut
 }
 
 func render(w http.ResponseWriter, status int, v view) {
@@ -70,7 +71,12 @@ func (s *Service) validPreauth(token string) bool {
 }
 func (s *Service) form(w http.ResponseWriter, r *http.Request, token string, preauth bool) bool {
 	origin, _ := url.Parse(s.options.Origin)
-	if r.Header.Get("Origin") != s.options.Origin || r.Host != origin.Host {
+	// The embedded local browser uses an opaque Origin, but supplies Fetch Metadata.
+	// Only an explicitly enabled loopback development setup accepts this case;
+	// the signed preauth/session CSRF validation below remains mandatory.
+	local := origin.Hostname() == "localhost" || (net.ParseIP(origin.Hostname()) != nil && net.ParseIP(origin.Hostname()).IsLoopback())
+	embeddedDevelopment := len(s.options.DevelopmentLogins) > 0 && local && r.Header.Get("Origin") == "null" && r.Header.Get("Sec-Fetch-Site") == "same-origin"
+	if (r.Header.Get("Origin") != s.options.Origin && !embeddedDevelopment) || r.Host != origin.Host {
 		http.Error(w, "Origem inválida; use o endereço oficial do ambiente", 403)
 		return false
 	}
@@ -134,14 +140,23 @@ func statusFor(err error) int {
 func (s *Service) Mount(r chi.Router) {
 	r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 		csrf := s.CSRF(s.preauth(w, r))
-		render(w, 200, view{View: "login", Title: "Entrar", CSRF: csrf})
+		render(w, 200, view{View: "login", Title: "Entrar", CSRF: csrf, DevelopmentLogins: s.developmentShortcuts()})
 	})
-	r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
+	login := func(w http.ResponseWriter, r *http.Request) {
 		pre := readCookie(r, preauthCookie)
 		if !s.form(w, r, pre, true) {
 			return
 		}
-		token, err := s.Login(r.Context(), r.PostForm.Get("organization"), r.PostForm.Get("email"), r.PostForm.Get("password"), clientIP(r))
+		organization, email, password := r.PostForm.Get("organization"), r.PostForm.Get("email"), r.PostForm.Get("password")
+		if r.URL.Path == "/login/development" {
+			credential, ok := s.options.DevelopmentLogins[r.PostForm.Get("profile")]
+			if !ok {
+				http.NotFound(w, r)
+				return
+			}
+			organization, email, password = credential.Organization, credential.Email, credential.Password
+		}
+		token, err := s.Login(r.Context(), organization, email, password, clientIP(r))
 		if err != nil {
 			status := 401
 			if errors.Is(err, ErrRate) {
@@ -150,7 +165,7 @@ func (s *Service) Mount(r chi.Router) {
 			} else if !errors.Is(err, ErrCredentials) {
 				status = 503
 			}
-			render(w, status, view{View: "login", Title: "Entrar", CSRF: s.CSRF(pre), Notice: "Não foi possível entrar. Confira as credenciais ou aguarde antes de tentar novamente."})
+			render(w, status, view{View: "login", Title: "Entrar", CSRF: s.CSRF(pre), DevelopmentLogins: s.developmentShortcuts(), Notice: "Não foi possível entrar. Confira as credenciais ou aguarde antes de tentar novamente."})
 			return
 		}
 		if old := readCookie(r, sessionCookie); old != "" {
@@ -159,7 +174,11 @@ func (s *Service) Mount(r chi.Router) {
 		s.cookie(w, sessionCookie, token, 12*time.Hour)
 		s.clearCookie(w, preauthCookie)
 		http.Redirect(w, r, "/account", http.StatusSeeOther)
-	})
+	}
+	r.Post("/login", login)
+	if len(s.options.DevelopmentLogins) > 0 {
+		r.Post("/login/development", login)
+	}
 	r.Get("/forgot", func(w http.ResponseWriter, r *http.Request) {
 		render(w, 200, view{View: "forgot", Title: "Recuperar acesso", CSRF: s.CSRF(s.preauth(w, r))})
 	})

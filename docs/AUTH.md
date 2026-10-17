@@ -84,3 +84,20 @@ separado de credenciais e contexto transacional SET LOCAL seguro para o pool.
 Auditoria persistente registra ações de identidade. /app, /admin e /portal têm controle
 de acesso, mas seus painéis operacionais completos ficam nas sprints seguintes.
 Produção permanece bloqueada até homologação operacional e jurídica.
+
+## Atalhos de login locais
+
+`docker compose exec app go run ./cmd/identity shortcuts` prepara contas para os
+cinco perfis: administrador global, owner, admin, lawyer e viewer. Depois execute
+`docker compose --project-name robo-juridico-go-saas restart app`. Os botões aparecem
+em /login quando o arquivo ignorado `.local/development-logins.json` é carregado.
+Senhas aleatórias permanecem no servidor; cada botão envia somente perfil e CSRF.
+Login normal, estado ativo, rate limit, permissões e MFA continuam sendo exigidos.
+O administrador global usa a conta bootstrap existente; os demais são contas de teste
+na mesma organização. O carregador só habilita em development com rj_saas_dev/rj_app.
+Sem o arquivo, nenhuma rota de atalho é registrada. Para desativar, remova esse
+arquivo local e reinicie o app. Não inclua .local em imagens ou distribuições.
+
+O navegador interno local usa Origin: null. Com atalhos habilitados e origem loopback,
+essa variante exige Sec-Fetch-Site: same-origin, Host exato e o mesmo CSRF assinado.
+Fora dessa configuração, continua exigida a origem explícita configurada.

@@ -27,9 +27,10 @@ var (
 )
 
 type Options struct {
-	Origin       string
-	CookieSecure bool
-	Clock        func() time.Time
+	Origin            string
+	CookieSecure      bool
+	Clock             func() time.Time
+	DevelopmentLogins map[string]DevelopmentLogin
 }
 type Service struct {
 	pool     *pgxpool.Pool

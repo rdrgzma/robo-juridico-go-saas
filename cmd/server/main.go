@@ -32,7 +32,12 @@ func main() {
 	}
 	defer pool.Close()
 	ready := func(ctx context.Context) error { return storage.Ready(ctx, pool) }
-	identity, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure})
+	developmentLogins, err := auth.LoadDevelopmentLogins(cfg.Environment, cfg.DatabaseURL, ".local/development-logins.json")
+	if err != nil {
+		logger.Error("invalid development login configuration")
+		os.Exit(1)
+	}
+	identity, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure, DevelopmentLogins: developmentLogins})
 	if err != nil {
 		logger.Error("identity configuration invalid")
 		os.Exit(1)
