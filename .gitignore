@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+/bin/
+/coverage*
+*.exe
+*.db
+*.sqlite*
+*.log
+*.zip
+*.dump
+*.pem
+*.key

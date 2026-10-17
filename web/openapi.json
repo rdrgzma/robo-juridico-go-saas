@@ -1,0 +1,903 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Robô Jurídico Go — Sprint 1",
+    "version": "0.1.0-dev",
+    "description": "Somente local. APIs de simulação novas; não há paridade com todos os contratos legados."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080"
+    }
+  ],
+  "paths": {
+    "/v1/simulacoes/liquidacao": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiquidacaoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiquidacaoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulacoes/financiamento": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinanciamentoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Parcela"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulacoes/prazos": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrazoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrazoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cnj/{numero}": {
+      "get": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "numero",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Número validado; metadados básicos (contrato reduzido)"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "422": {
+            "description": "CNJ inválido"
+          },
+          "429": {
+            "description": "Limite local"
+          }
+        }
+      }
+    },
+    "/api/v1/simulacoes/liquidacao": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiquidacaoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiquidacaoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulacoes/financiamento": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinanciamentoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Parcela"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulacoes/prazos": {
+      "post": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrazoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulação determinística; não é laudo certificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrazoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON inválido ou corpo >64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chave inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Media type inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrada rejeitada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite local excedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cnj/{numero}": {
+      "get": {
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "numero",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Número validado; metadados básicos (contrato reduzido)"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "422": {
+            "description": "CNJ inválido"
+          },
+          "429": {
+            "description": "Limite local"
+          }
+        }
+      }
+    },
+    "/saude": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Liveness apenas, sem dependências nesta sprint"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "LiquidacaoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "principal": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "fator_correcao": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "taxa_mensal": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "meses": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1200
+          },
+          "compostos": {
+            "type": "boolean"
+          },
+          "pagamento": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "imputar_juros_primeiro": {
+            "type": "boolean"
+          },
+          "multa_percentual": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "honorarios_percentual": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          }
+        },
+        "required": [
+          "principal",
+          "fator_correcao",
+          "taxa_mensal",
+          "pagamento",
+          "multa_percentual",
+          "honorarios_percentual"
+        ]
+      },
+      "FinanciamentoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "principal": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "taxa_mensal": {
+            "type": "string",
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,8})?$",
+            "description": "Decimal em string, ponto, até 8 casas. Valores monetários de saída têm 2 casas."
+          },
+          "parcelas": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "sistema": {
+            "type": "string",
+            "enum": [
+              "PRICE",
+              "SAC"
+            ]
+          }
+        },
+        "required": [
+          "principal",
+          "taxa_mensal",
+          "parcelas",
+          "sistema"
+        ]
+      },
+      "PrazoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data_evento": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "modo": {
+            "type": "string",
+            "enum": [
+              "UTEIS",
+              "CORRIDOS"
+            ]
+          },
+          "intimacao": {
+            "type": "string",
+            "enum": [
+              "DIRETA",
+              "DIARIO"
+            ]
+          },
+          "dobro": {
+            "type": "boolean"
+          },
+          "suspender_recesso": {
+            "type": "boolean"
+          },
+          "feriados": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        },
+        "required": [
+          "data_evento",
+          "dias",
+          "modo",
+          "intimacao"
+        ]
+      },
+      "Erro": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "erro": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "mensagem": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "codigo",
+              "mensagem"
+            ]
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "erro",
+          "request_id"
+        ]
+      },
+      "LiquidacaoResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "principal_corrigido": {
+            "type": "string"
+          },
+          "juros": {
+            "type": "string"
+          },
+          "pagamento_juros": {
+            "type": "string"
+          },
+          "pagamento_principal": {
+            "type": "string"
+          },
+          "saldo": {
+            "type": "string"
+          },
+          "multa": {
+            "type": "string"
+          },
+          "honorarios": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "metodo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_corrigido",
+          "juros",
+          "pagamento_juros",
+          "pagamento_principal",
+          "saldo",
+          "multa",
+          "honorarios",
+          "total",
+          "metodo"
+        ]
+      },
+      "Parcela": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "numero": {
+            "type": "integer"
+          },
+          "prestacao": {
+            "type": "string"
+          },
+          "juros": {
+            "type": "string"
+          },
+          "amortizacao": {
+            "type": "string"
+          },
+          "saldo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "numero",
+          "prestacao",
+          "juros",
+          "amortizacao",
+          "saldo"
+        ]
+      },
+      "PrazoResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "publicacao": {
+            "type": "string",
+            "format": "date"
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "memoria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "contado": {
+                  "type": "integer"
+                },
+                "motivo": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data",
+                "contado",
+                "motivo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "publicacao",
+          "vencimento",
+          "memoria"
+        ]
+      }
+    }
+  }
+}
