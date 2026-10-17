@@ -47,11 +47,22 @@ histórico jurídico, recálculo autorizado, memórias com assinatura HMAC e dow
 proteção de último owner; alteração segura de senha com Argon2id, incremento de password_version,
 gestão pontual e revogação global de sessões ativas. Migration 000005 aplicada. Detalhes em PORTAL.md.
 
-Próxima etapa de negócio: Sprint 6, homologação e prontidão operacional (testes de carga, backup/restore, deploy VPS e migração legada somente-leitura).
+Sprint 6: Homologação e prontidão operacional entregues: testes de carga e capacidade
+sob alta concorrência com validação exata de esgotamento de quota sem over-granting nem
+race conditions; revisão automatizada de segurança (resistência comprovada contra SQL injection,
+integridade HMAC de memórias de cálculo, proteção de cabeçalhos de segurança, CSRF e Origin);
+procedimentos e testes automatizados de backup lógico e restore PostgreSQL preservando
+integridade referencial e registros; infraestrutura completa de produção em `deploy/` com Nginx TLS,
+rate limit e cabeçalhos de segurança, unidades systemd isoladas (`robo-juridico.service` e
+`robo-juridico-migrate.service`), regras de firewall UFW e scripts operacionais (`install.sh`,
+`update.sh` com rollback automático, `backup.sh` com rotação de 7 dias e `restore.sh` com ensaio prévio);
+ferramenta de inspeção e dry-run do banco legado SQLite em modo somente leitura (`internal/legacymigrate`
+e `cmd/legacymigrate`); guia operacional de produção e checklist formal de go-live em `docs/OPERATIONS.md`.
+
 Dívida jurídica explícita: séries curadas aplicadas ao motor, regimes legais/SELIC,
 pagamentos cronológicos, feriados por tribunal e laudos homologados. Também faltam
 consulta OAB, paginação integral das fontes, visualização de peças e sync agendado.
-Nenhum dado legado foi importado. Cobrança externa, SMTP, RLS, retenção/LGPD,
-backup/restore e operação pública permanecem futuros. Serviços legados preservados.
+Nenhum dado legado foi importado. Cobrança externa, SMTP, RLS, retenção/LGPD e operação pública
+permanecem conforme planejamento do cliente. Serviços legados preservados integralmente.
 
 Commits usam identidade técnica por comando; configuração Git global preservada.

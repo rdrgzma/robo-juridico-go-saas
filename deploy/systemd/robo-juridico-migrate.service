@@ -1,0 +1,23 @@
+[Unit]
+Description=Robô Jurídico Go SaaS — Execução de Migrações de Banco de Dados
+Documentation=https://github.com/rdrgzma/robo-juridico-go-saas
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=robo-juridico
+Group=robo-juridico
+WorkingDirectory=/opt/robo-juridico
+EnvironmentFile=/opt/robo-juridico/etc/robo-juridico.env
+ExecStart=/opt/robo-juridico/bin/migrate up
+RemainAfterExit=true
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

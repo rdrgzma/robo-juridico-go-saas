@@ -1,0 +1,50 @@
+name: robo-juridico-prod
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/production/Dockerfile
+    restart: always
+    environment:
+      APP_ENV: production
+      HTTP_ADDR: 0.0.0.0:8080
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Defina a URL oficial de producao em .env}
+      API_KEY_SHA256: ${API_KEY_SHA256:?Configure a chave API mestre}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?Configure a chave de criptografia}
+      AUTH_DISABLE_MFA: "false"
+      DATAJUD_API_KEY: ${DATAJUD_API_KEY:-}
+      DJEN_ENABLED: ${DJEN_ENABLED:-false}
+      DATABASE_URL: postgres://rj_app:${APP_DB_PASSWORD:?Configure senha}@db:5432/rj_saas_prod?sslmode=disable
+    ports:
+      - "127.0.0.1:8080:8080" # Somente em loopback para o Nginx reverso local
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/rj-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 15s
+
+  db:
+    image: postgres:17.11-bookworm
+    restart: always
+    environment:
+      POSTGRES_USER: rj_bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure senha de bootstrap}
+      POSTGRES_DB: postgres
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Configure senha da app}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ../docker/dev/init-db.sh:/docker-entrypoint-initdb.d/01-rj.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rj_bootstrap -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 20s
+
+volumes:
+  postgres_prod_data:

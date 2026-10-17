@@ -25,3 +25,16 @@ Procedimento previsto:
 
 Ainda faltam amostras anonimizadas e schemas reais autorizados. Não há suposições
 de que os modelos Laravel e o SQLite desktop sejam idênticos.
+
+## Ferramenta de Inspeção e Diagnóstico Somente-Leitura (Sprint 6)
+
+Entregue o utilitário `cmd/legacymigrate` e o pacote `internal/legacymigrate`:
+- Inspeção estritamente em modo somente leitura (`O_RDONLY`), sem criar travas nem mutar arquivos legados.
+- Cálculo de hash SHA-256 e extração de metadados do cabeçalho SQLite 3 (tamanho de página, páginas totais, schema version e user version).
+- Análise de compatibilidade de esquemas SQL e mapeamento para as tabelas PostgreSQL da arquitetura SaaS.
+- Execução com flag `-dry-run` e suporte a saída estruturada `-json`:
+  ```bash
+  go run ./cmd/legacymigrate -db /caminho/snapshot.db -dry-run
+  go run ./cmd/legacymigrate -dump /caminho/dump.sql -dry-run -json
+  ```
+- Diretrizes de segurança ativas: proibição de rehash cego de senhas legadas, exigência de fuso horário explícito e tipagem numérica decimal exata.

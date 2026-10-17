@@ -170,3 +170,17 @@ Testes novos em `tests/integration/portal_test.go`:
 - Governança de equipe e papéis: atualização de dados da organização (`members:manage`), provisionamento de novos membros, alteração de papel (`owner`, `admin`, `lawyer`, `viewer`), proteção contra rebaixamento do último `owner` ativo e suspensão de membros com revogação imediata de suas sessões na organização. Negação (`403` / `ErrDenied`) para papéis `lawyer` e `viewer` em rotas de gestão de membros.
 - Segurança de conta e sessões: alteração de senha com Argon2id rejeitando senha atual incorreta, incrementando `password_version`, invalidando todas as demais sessões ativas e emitindo novo cookie; listagem de sessões com hash opaco (sem vazar tokens brutos) e revogação pontual e global.
 - Renderização HTTP: verificação com sucesso de todas as rotas autenticadas do portal (`/portal`, `/portal/usage`, `/portal/keys`, `/portal/history`, `/portal/team`, `/portal/security`).
+
+## Sprint 6 — homologação e prontidão operacional, 17/10/2026
+
+Execução em Docker:
+- `go fmt ./...` e `go vet ./...` sem apontamentos.
+- `cmd/devverify` passou com exit 0 (smoke HTTP, liquidação 1020.00, hot reload Go/HTML/CSS e restauração).
+- Testes unitários de `internal/legacymigrate`: inspeção de snapshots SQLite 3 em modo estritamente somente leitura (`O_RDONLY`), validação de integridade por cabeçalho/SHA-256 e análise de mapeamento de dumps em 1,011s.
+- `tests/integration/load_capacity_test.go`: teste de carga concorrente com 60 goroutines simultâneas sob barreira sincronizada competindo por 25 unidades de quota; exatamente 25 transações aceitas e 35 rejeitadas com `ErrQuota` (`HTTP 402`), comprovando ausência de over-granting e integridade das travas `FOR UPDATE` do PostgreSQL.
+- `tests/integration/security_review_test.go`:
+  - Resistência a SQL Injection em buscas administrativas, filtros de utilização e histórico jurídico com payloads agressivos (`' OR 1=1 --`, `UNION SELECT`, `DROP TABLE`).
+  - Integridade de memórias e laudos: verificação HMAC de 32 bytes; qualquer mutação de 1 byte no resultado ou entrada invalida a assinatura instantaneamente.
+  - Segurança de transporte e requisições: rejeição estrita com `HTTP 403` para requisições com cabeçalho `Origin` não autorizado ou CSRF forjado.
+- `tests/integration/backup_restore_test.go`: dump lógico e restauração entre schemas PostgreSQL independentes com preservação de registros, entidades relacionais, sequências e memórias de cálculo com integridade verificada.
+- Suíte completa de testes (`go test -race -count=1 ./...`) executada e aprovada com sucesso.

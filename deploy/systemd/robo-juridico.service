@@ -1,0 +1,38 @@
+[Unit]
+Description=Robô Jurídico Go SaaS — Aplicação Principal
+Documentation=https://github.com/rdrgzma/robo-juridico-go-saas
+After=network.target postgresql.service robo-juridico-migrate.service
+Requires=postgresql.service
+Wants=robo-juridico-migrate.service
+
+[Service]
+Type=simple
+User=robo-juridico
+Group=robo-juridico
+WorkingDirectory=/opt/robo-juridico
+EnvironmentFile=/opt/robo-juridico/etc/robo-juridico.env
+ExecStart=/opt/robo-juridico/bin/server
+Restart=always
+RestartSec=5s
+
+# Hardening e isolamento de segurança systemd
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+
+# Limites de recursos (SO)
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

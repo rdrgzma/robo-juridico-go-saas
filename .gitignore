@@ -15,3 +15,5 @@
 /tmp/
 /server
 /.local/
+/backups/
+*.sql.gz

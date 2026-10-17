@@ -11,7 +11,10 @@ Não houve deploy público nem alteração de VPS/domínio/Nginx/systemd/firewal
 scripts/build.ps1 e build.sh compilam binário Linux pelo contêiner app; dev.ps1 build
 ou dev.sh build constrói a imagem. Não usar executável Windows dentro da imagem Linux.
 
-Sprint 6 preparará Ubuntu LTS, VPS 4 vCPU/8 GB/80 GB+, PostgreSQL privado exclusivo,
-Nginx HTTPS, serviço systemd dedicado, releases/rollback, firewall e backup externo
-criptografado com restore ensaiado. Docker de produção será alternativa documentada.
-Não há ainda arquivos Nginx/systemd/install/update/backup/restore completos.
+Sprint 6 entregou a infraestrutura completa de implantação em `deploy/`:
+- Nginx com terminação TLS, rate limiting por IP, proxy reverso para `127.0.0.1:8080` e cabeçalhos de segurança (HSTS, CSP, X-Frame-Options, X-Content-Type-Options) em `deploy/nginx/robo-juridico.conf`.
+- Unidade systemd dedicada com isolamento `robo-juridico.service` e migrações prévias automáticas em `robo-juridico-migrate.service`.
+- Firewall UFW (`deploy/firewall/ufw-setup.sh`) com política default deny e liberação exclusiva das portas públicas 22, 80 e 443.
+- Alternativa conteinerizada `deploy/compose.prod.yaml` com imagem multi-stage Debian slim e usuário não-privilegiado.
+- Scripts operacionais testados em `deploy/scripts/`: `install.sh`, `update.sh` (com rollback automático se o health check falhar), `backup.sh` (com gzip, SHA-256 e rotação de 7 dias) e `restore.sh` (com ensaio prévio em banco temporário).
+- Detalhes e checklist de lançamento em `docs/OPERATIONS.md`.
