@@ -38,7 +38,7 @@ func main() {
 		logger.Error("invalid development login configuration")
 		os.Exit(1)
 	}
-	identity, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure, DevelopmentLogins: developmentLogins})
+	identity, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure, DisableMFA: cfg.DisableMFA, DevelopmentLogins: developmentLogins})
 	if err != nil {
 		logger.Error("identity configuration invalid")
 		os.Exit(1)

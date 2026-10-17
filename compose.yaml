@@ -12,6 +12,7 @@ services:
       API_KEY_SHA256: ${API_KEY_SHA256:?Execute scripts/dev.ps1 init ou scripts/dev.sh init}
       AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?Execute devinit extend em contêiner para atualizar o .env}
       PUBLIC_ORIGIN: http://localhost:8081
+      AUTH_DISABLE_MFA: ${AUTH_DISABLE_MFA:-true}
       DATAJUD_API_KEY: ${DATAJUD_API_KEY:-}
       DJEN_ENABLED: ${DJEN_ENABLED:-false}
       DATABASE_URL: postgres://rj_app:${APP_DB_PASSWORD:?Configure .env}@db:5432/rj_saas_dev?sslmode=disable

@@ -11,6 +11,7 @@ type Principal struct {
 	PlatformAdmin  bool     `json:"platform_admin"`
 	MFAVerified    bool     `json:"mfa_verified"`
 	MFAEnabled     bool     `json:"mfa_enabled"`
+	MFADisabled    bool     `json:"-"`
 	Permissions    []string `json:"permissions"`
 }
 
@@ -22,7 +23,9 @@ func (p Principal) Can(permission string) bool {
 	}
 	return false
 }
-func (p Principal) RequiresMFA() bool { return (p.PlatformAdmin || p.MFAEnabled) && !p.MFAVerified }
+func (p Principal) RequiresMFA() bool {
+	return !p.MFADisabled && (p.PlatformAdmin || p.MFAEnabled) && !p.MFAVerified
+}
 
 type contextKey struct{}
 

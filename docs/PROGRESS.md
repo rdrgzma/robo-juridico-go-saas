@@ -8,7 +8,9 @@ Sprint 1: auditoria e reaproveitamento autorizado dos motores, Docker Compose,
 PostgreSQL separado, migrations, regressões jurídicas, health checks e hot reload.
 
 Sprint 2: usuários/memberships, RBAC, sessões, Argon2id, CSRF/Origin, recuperação
-local criptografada, MFA e códigos de recuperação, gestão de membros/chaves, auditoria,
+local criptografada, MFA e códigos de recuperação (dispensados por padrão no ambiente
+local via `AUTH_DISABLE_MFA=true`, reversível com `AUTH_DISABLE_MFA=false` sem apagar
+segredos nem forjar `mfa_verified`), gestão de membros/chaves, auditoria,
 cotas transacionais e reconciliação. Migration 000002 aplicada. Bootstrap local gerado
 sem senha fixa; instruções em AUTH.md. /admin e /portal mantêm estrutura de acesso; funções de negócio ainda futuras.
 

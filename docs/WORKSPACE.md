@@ -2,7 +2,8 @@
 
 Acesse http://localhost:8081/app depois de autenticar um usuário com calculations:run.
 Owner, admin e lawyer possuem essa permissão; viewer continua restrito à conta/portal.
-Administrador global precisa concluir MFA. Os atalhos locais não dispensam essa regra.
+No ambiente local padrão (`AUTH_DISABLE_MFA=true`), o segundo fator fica dispensado;
+com `AUTH_DISABLE_MFA=false`, o administrador global e contas com TOTP ativo precisam concluir MFA.
 
 ## Funcionalidades
 

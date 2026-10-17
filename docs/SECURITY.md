@@ -20,8 +20,11 @@ Seed legado só em testes. Erro de correção/juros impede resultado; não há f
 Rotas legais não homologadas rejeitam a requisição. Nenhum resultado do frontend é
 certificado; laudos ainda não são emitidos. Rate limiter local não é franquia de cliente.
 
-Sprint 2 implementa Argon2id, sessões opacas revogáveis, CSRF/Origin, MFA global,
-recuperação local, RBAC por organização, chaves com escopos, cotas e auditoria.
+Sprint 2 implementa Argon2id, sessões opacas revogáveis, CSRF/Origin, MFA TOTP e
+códigos de recuperação (com dispensa local reversível `AUTH_DISABLE_MFA=true` restrita
+exclusivamente a `development`, origem loopback e `rj_saas_dev`/`rj_app`, preservando
+segredos e mantendo `mfa_verified=false`), recuperação local, RBAC por organização,
+chaves com escopos, cotas e auditoria.
 Detalhes, exceção Secure no HTTP local e limites em AUTH.md. Isolamento por filtros
 de organização e FKs compostas testados; RLS não habilitado. Limites de plano são
 fundação SQL, sem cobrança comercial. APP_ENV=production continua bloqueado até
@@ -33,7 +36,7 @@ canônico assinado/HMAC com segredo externo e rotação; frontend jamais prova a
 Nenhum desses controles futuros é considerado concluído por existir página ou tabela.
 
 Painel Sprint 3: histórico/downloads/recálculo filtrados por organização, com permissão
-atual e MFA; imports limitados, resultados escapados e CSV protegido. Memória privada
+atual e política de MFA ativa; imports limitados, resultados escapados e CSV protegido. Memória privada
 com HMAC do registro completo e CSS próprio com hash CSP na exportação HTML.
 Sem verificador público, uploads de laudo ou alegação de certificação jurídica.
 Fontes possuem destinos fixos, timeout, limite de resposta e não seguem redirects.

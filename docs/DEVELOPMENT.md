@@ -89,7 +89,8 @@ Para instalações existentes: `./scripts/dev.ps1 extend` adiciona somente a var
 AUTH_ENCRYPTION_KEY ausente; depois `docker compose up -d --build --wait` aplica a
 configuração. `docker compose exec app go run ./cmd/identity bootstrap` gera conta
 local em .local/bootstrap.json; preserva bootstrap existente. Acesse
-http://localhost:8081/login e configure MFA. Use a origem canônica PUBLIC_ORIGIN.
+http://localhost:8081/login (MFA dispensado por padrão em dev via `AUTH_DISABLE_MFA=true`;
+defina `AUTH_DISABLE_MFA=false` no `.env` e recrie o `app` para exigir TOTP). Use a origem canônica PUBLIC_ORIGIN.
 
 Comandos member/outbox e política de segredos em AUTH.md. .local é excluído do Git,
 Docker e Air. HTTP local usa cookie sem Secure; HTTPS o exige. Não regenere a chave

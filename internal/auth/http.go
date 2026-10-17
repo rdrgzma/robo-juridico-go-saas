@@ -22,7 +22,7 @@ const preauthCookie = "rj_preauth"
 type view struct {
 	View, Title, CSRF, Notice, Token, Secret, AuthenticatorURL, NewKey string
 	Principal                                                          tenancy.Principal
-	CanManage, CanKeys                                                 bool
+	CanManage, CanKeys, MFADisabled                                    bool
 	Members                                                            []Member
 	Keys                                                               []Key
 	Codes                                                              []string
@@ -151,7 +151,7 @@ func statusFor(err error) int {
 func (s *Service) Mount(r chi.Router) {
 	r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 		csrf := s.CSRF(s.preauth(w, r))
-		render(w, 200, view{View: "login", Title: "Entrar", CSRF: csrf, DevelopmentLogins: s.developmentShortcuts()})
+		render(w, 200, view{View: "login", Title: "Entrar", CSRF: csrf, MFADisabled: s.options.DisableMFA, DevelopmentLogins: s.developmentShortcuts()})
 	})
 	login := func(w http.ResponseWriter, r *http.Request) {
 		pre := readCookie(r, preauthCookie)
@@ -176,7 +176,7 @@ func (s *Service) Mount(r chi.Router) {
 			} else if !errors.Is(err, ErrCredentials) {
 				status = 503
 			}
-			render(w, status, view{View: "login", Title: "Entrar", CSRF: s.CSRF(pre), DevelopmentLogins: s.developmentShortcuts(), Notice: "Não foi possível entrar. Confira as credenciais ou aguarde antes de tentar novamente."})
+			render(w, status, view{View: "login", Title: "Entrar", CSRF: s.CSRF(pre), MFADisabled: s.options.DisableMFA, DevelopmentLogins: s.developmentShortcuts(), Notice: "Não foi possível entrar. Confira as credenciais ou aguarde antes de tentar novamente."})
 			return
 		}
 		if old := readCookie(r, sessionCookie); old != "" {
@@ -249,7 +249,7 @@ func (s *Service) Mount(r chi.Router) {
 	for _, path := range []string{"/portal", "/admin"} {
 		path := path
 		r.Get(path, s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
-			if path == "/admin" && (!p.PlatformAdmin || !p.MFAVerified) {
+			if path == "/admin" && (!p.PlatformAdmin || p.RequiresMFA()) {
 				http.Error(w, "Acesso administrativo requer permissão global e MFA", 403)
 				return
 			}

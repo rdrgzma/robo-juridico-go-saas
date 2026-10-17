@@ -13,8 +13,10 @@ docker compose exec app go run ./cmd/identity bootstrap
 
 O bootstrap já foi executado neste ambiente. Organização, e-mail e senha aleatórios
 estão somente em `.local/bootstrap.json`, ignorado pelo Git e pelo contexto Docker.
-Reexecutar preserva a conta existente. O administrador global configura TOTP no
-primeiro acesso; guarde os dez códigos de recuperação mostrados uma única vez.
+Reexecutar preserva a conta existente. Por padrão no Docker Compose de desenvolvimento,
+a exigência de segundo fator (MFA) está dispensada (`AUTH_DISABLE_MFA=true`). Quando a
+exigência estiver ativa (`AUTH_DISABLE_MFA=false`), o administrador global configura
+TOTP no primeiro acesso e recebe dez códigos de recuperação mostrados uma única vez.
 
 Para provisionar outro usuário local, sem redefinir contas existentes:
 
@@ -31,14 +33,21 @@ Papéis owner, admin, lawyer e viewer pertencem à organização. Owner/admin ge
 membros e chaves segundo permissões; admin não promove ninguém a owner. A última
 propriedade ativa é preservada mesmo sob alterações concorrentes. Viewer não calcula.
 Platform_admin é atribuição global separada: owner/admin de organização não recebem
-acesso ao /admin global. MFA é obrigatório para administradores globais e, após
-inscrição, para qualquer usuário que o ativou. Os demais podem ativá-lo na conta.
+acesso ao /admin global. Quando o MFA está exigido (`AUTH_DISABLE_MFA=false`), ele é
+obrigatório para administradores globais e, após inscrição, para qualquer usuário que o
+ativou. No ambiente local padrão (`AUTH_DISABLE_MFA=true`), a cobrança de MFA fica
+dispensada sem apagar segredos existentes nem marcar `mfa_verified=true` na sessão;
+a dispensa só é aceita em `APP_ENV=development` com origem loopback e banco
+`rj_saas_dev`/`rj_app`. Para reativar a exigência local de MFA, defina
+`AUTH_DISABLE_MFA=false` no `.env` e recrie apenas o serviço `app`:
+`docker compose up -d --no-deps --force-recreate app`.
 
 Senhas Argon2id: 64 MiB, três iterações, paralelismo um, salt aleatório. Senhas têm
 12 a 128 bytes. Até quatro operações Argon2 simultâneas por processo. Sessão opaca
 aleatória, somente hash SHA-256 no PostgreSQL; validade absoluta 12h e inatividade
-2h. Sessão pendente de MFA dura 5min. A conclusão do MFA rotaciona o token. Logout
-revoga a sessão; encerrar todas e redefinir senha revogam as demais. Estado ativo,
+2h. Quando o MFA está exigido e pendente, a sessão dura 5min e a conclusão do MFA
+rotaciona o token; com a dispensa local ativa, a sessão recebe validade normal de 12h.
+Logout revoga a sessão; encerrar todas e redefinir senha revogam as demais. Estado ativo,
 papéis e versão da senha são reavaliados no banco.
 
 Cookies HttpOnly, SameSite=Strict, host-only e Path=/. Secure acompanha origem HTTPS;
@@ -92,7 +101,8 @@ cinco perfis: administrador global, owner, admin, lawyer e viewer. Depois execut
 `docker compose --project-name robo-juridico-go-saas restart app`. Os botões aparecem
 em /login quando o arquivo ignorado `.local/development-logins.json` é carregado.
 Senhas aleatórias permanecem no servidor; cada botão envia somente perfil e CSRF.
-Login normal, estado ativo, rate limit, permissões e MFA continuam sendo exigidos.
+Login normal, estado ativo, rate limit e permissões continuam sendo exigidos; a
+cobrança de MFA segue `AUTH_DISABLE_MFA` (`true` por padrão no Compose local).
 O administrador global usa a conta bootstrap existente; os demais são contas de teste
 na mesma organização. O carregador só habilita em development com rj_saas_dev/rj_app.
 Sem o arquivo, nenhuma rota de atalho é registrada. Para desativar, remova esse

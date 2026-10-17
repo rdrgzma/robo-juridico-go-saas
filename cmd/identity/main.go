@@ -55,7 +55,7 @@ func run() error {
 		return err
 	}
 	defer pool.Close()
-	service, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure})
+	service, err := auth.New(pool, cfg.AuthKey, auth.Options{Origin: cfg.PublicOrigin, CookieSecure: cfg.CookieSecure, DisableMFA: cfg.DisableMFA})
 	if err != nil {
 		return err
 	}
@@ -74,10 +74,10 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("falha ao criar organização local: %w", err)
 		}
-		if err = save(path, map[string]any{"organization": slug, "email": email, "password": password, "user_id": p.UserID, "organization_id": p.OrganizationID, "url": cfg.PublicOrigin + "/login", "mfa_required": true}); err != nil {
+		if err = save(path, map[string]any{"organization": slug, "email": email, "password": password, "user_id": p.UserID, "organization_id": p.OrganizationID, "url": cfg.PublicOrigin + "/login", "mfa_required": !cfg.DisableMFA}); err != nil {
 			return err
 		}
-		fmt.Println("Conta local criada; credenciais aleatórias em", path, ". MFA obrigatório no primeiro acesso.")
+		fmt.Println("Conta local criada; credenciais aleatórias em", path)
 	case "shortcuts":
 		const path = ".local/development-logins.json"
 		if _, err := os.Stat(path); err == nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/tenancy"
+	"net"
 	"net/mail"
 	"net/url"
 	"regexp"
@@ -29,6 +30,7 @@ var (
 type Options struct {
 	Origin            string
 	CookieSecure      bool
+	DisableMFA        bool
 	Clock             func() time.Time
 	DevelopmentLogins map[string]DevelopmentLogin
 }
@@ -44,6 +46,12 @@ func New(pool *pgxpool.Pool, key []byte, options Options) (*Service, error) {
 	origin, err := url.Parse(options.Origin)
 	if err != nil || origin.Host == "" || origin.User != nil || origin.RawQuery != "" || origin.Fragment != "" || origin.Path != "" || (origin.Scheme != "http" && origin.Scheme != "https") {
 		return nil, fmt.Errorf("PUBLIC_ORIGIN inválida")
+	}
+	if options.DisableMFA {
+		ip := net.ParseIP(origin.Hostname())
+		if origin.Hostname() != "localhost" && (ip == nil || !ip.IsLoopback()) {
+			return nil, fmt.Errorf("dispensa de MFA permitida apenas em origem local de desenvolvimento")
+		}
 	}
 	if len(key) != 32 || pool == nil {
 		return nil, fmt.Errorf("pool e chave de autenticação de 32 bytes obrigatórios")
@@ -134,6 +142,7 @@ func (s *Service) CreateOrganization(ctx context.Context, slug, name, email, pas
 	p.Email = email
 	p.Role = "owner"
 	p.PlatformAdmin = platformAdmin
+	p.MFADisabled = s.options.DisableMFA
 	if err = audit(ctx, tx, p, "organization.created", p.OrganizationID); err != nil {
 		return p, err
 	}
@@ -183,7 +192,7 @@ func (s *Service) issueSession(ctx context.Context, tx pgx.Tx, p tenancy.Princip
 	token := RandomToken()
 	now := s.now()
 	duration := 12 * time.Hour
-	if (p.PlatformAdmin || p.MFAEnabled) && !verified {
+	if !s.options.DisableMFA && (p.PlatformAdmin || p.MFAEnabled) && !verified {
 		duration = 5 * time.Minute
 	}
 	tag, err := tx.Exec(ctx, `INSERT INTO sessions(token_hash,organization_id,user_id,password_version,mfa_verified,created_at,last_seen,expires_at)
@@ -214,6 +223,7 @@ func (s *Service) Session(ctx context.Context, token string) (tenancy.Principal,
 	if err != nil {
 		return p, err
 	}
+	p.MFADisabled = s.options.DisableMFA
 	_, err = s.pool.Exec(ctx, "UPDATE sessions SET last_seen=$2 WHERE token_hash=$1 AND last_seen<$3", Digest(token), now, now.Add(-time.Minute))
 	return p, err
 }

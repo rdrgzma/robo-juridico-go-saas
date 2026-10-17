@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -16,6 +17,7 @@ type Config struct {
 	AuthKey      []byte
 	PublicOrigin string
 	CookieSecure bool
+	DisableMFA   bool
 }
 
 func Load() (Config, error) {
@@ -54,5 +56,16 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("PUBLIC_ORIGIN local explícita obrigatória")
 	}
 	c.CookieSecure = origin.Scheme == "https"
+	switch os.Getenv("AUTH_DISABLE_MFA") {
+	case "", "false":
+	case "true":
+		dbURL, err := url.Parse(c.DatabaseURL)
+		if err != nil || dbURL.User == nil || dbURL.User.Username() != "rj_app" || strings.TrimPrefix(dbURL.Path, "/") != "rj_saas_dev" {
+			return c, fmt.Errorf("AUTH_DISABLE_MFA permitido apenas no banco rj_saas_dev com role rj_app")
+		}
+		c.DisableMFA = true
+	default:
+		return c, fmt.Errorf("AUTH_DISABLE_MFA inválido: use true ou false")
+	}
 	return c, nil
 }
