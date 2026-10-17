@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-//go:embed templates/public/*.html templates/auth/*.html templates/app/*.html static/css/*.css static/js/*.js openapi.json
+//go:embed templates/public/*.html templates/auth/*.html templates/app/*.html templates/admin/*.html static/css/*.css static/js/*.js openapi.json
 var files embed.FS
 var index = template.Must(template.ParseFS(files, "templates/public/index.html"))
 var docs = template.Must(template.ParseFS(files, "templates/public/docs.html"))
@@ -37,8 +37,10 @@ func OpenAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 var workspace = template.Must(template.ParseFS(files, "templates/app/workspace.html"))
+var adminView = template.Must(template.ParseFS(files, "templates/admin/admin.html"))
 
 func Workspace(w http.ResponseWriter, data any) { _ = workspace.Execute(w, data) }
+func Admin(w http.ResponseWriter, data any)     { _ = adminView.Execute(w, data) }
 func AppStyle(w http.ResponseWriter, r *http.Request) {
 	b, _ := files.ReadFile("static/css/app.css")
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")

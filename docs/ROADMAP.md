@@ -9,7 +9,7 @@
    recálculo e exportações privadas. Limites e dívidas em WORKSPACE.md: homologação
    das fontes, motor cronológico, políticas legais, calendário por tribunal, sync
    agendado, laudos públicos e visualização de peças não estão concluídos.
-4. Admin: clientes/planos/contratos, usuários/chaves/cotas, auditoria e indicadores.
+4. Admin: clientes/planos/contratos, usuários/chaves/cotas, sincronização controlada de índices, auditoria e indicadores. Concluída (ver ADMIN.md).
 5. Portal: plano/consumo/chaves, histórico/laudos, documentação e configurações.
 6. Homologação e operação: carga/segurança/backup/restore, Nginx/systemd/VPS e alternativa Docker.
 

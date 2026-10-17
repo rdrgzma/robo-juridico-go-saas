@@ -51,7 +51,7 @@ func apiAuthentication(keyHash [32]byte, logger *slog.Logger, identity *auth.Ser
 				ip = r.RemoteAddr
 			}
 			scope, billable := auth.APIRequirement(r.URL.Path, r.Method)
-			access, err := identity.BeginAPI(r.Context(), key, scope, ip, billable)
+			access, err := identity.BeginAPI(r.Context(), key, scope, ip, billable, auth.APIModule(r.URL.Path))
 			if err != nil {
 				status := identity.APIError(err)
 				if status == 429 {

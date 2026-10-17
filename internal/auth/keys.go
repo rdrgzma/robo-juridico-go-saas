@@ -14,6 +14,7 @@ type Key struct {
 	Name      string     `json:"name"`
 	Prefix    string     `json:"prefix"`
 	Scopes    []string   `json:"scopes"`
+	CreatedAt time.Time  `json:"created_at"`
 	RevokedAt *time.Time `json:"revoked_at"`
 	LastUsed  *time.Time `json:"last_used_at"`
 }
@@ -52,7 +53,7 @@ func (s *Service) IssueKey(ctx context.Context, p tenancy.Principal, name string
 	key.Name = name
 	key.Prefix = token[:11]
 	key.Scopes = scopes
-	if err = tx.QueryRow(ctx, "INSERT INTO api_keys(organization_id,created_by,name,prefix,token_hash,scopes) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text", p.OrganizationID, p.UserID, name, key.Prefix, Digest(token), scopes).Scan(&key.ID); err != nil {
+	if err = tx.QueryRow(ctx, "INSERT INTO api_keys(organization_id,created_by,name,prefix,token_hash,scopes) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text,created_at", p.OrganizationID, p.UserID, name, key.Prefix, Digest(token), scopes).Scan(&key.ID, &key.CreatedAt); err != nil {
 		return key, "", err
 	}
 	if err = audit(ctx, tx, p, "api_key.created", key.ID); err != nil {
@@ -64,7 +65,7 @@ func (s *Service) Keys(ctx context.Context, p tenancy.Principal) ([]Key, error) 
 	if !p.Can("keys:manage") || p.RequiresMFA() {
 		return nil, ErrDenied
 	}
-	rows, err := s.pool.Query(ctx, "SELECT id::text,name,prefix,scopes,revoked_at,last_used_at FROM api_keys WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 200", p.OrganizationID)
+	rows, err := s.pool.Query(ctx, "SELECT id::text,name,prefix,scopes,created_at,revoked_at,last_used_at FROM api_keys WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 200", p.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (s *Service) Keys(ctx context.Context, p tenancy.Principal) ([]Key, error) 
 	keys := []Key{}
 	for rows.Next() {
 		var k Key
-		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &k.Scopes, &k.RevokedAt, &k.LastUsed); err != nil {
+		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &k.Scopes, &k.CreatedAt, &k.RevokedAt, &k.LastUsed); err != nil {
 			return nil, err
 		}
 		keys = append(keys, k)
@@ -104,12 +105,48 @@ func (s *Service) RevokeKey(ctx context.Context, p tenancy.Principal, id string)
 	return tx.Commit(ctx)
 }
 
+// RotateKey atomically revokes the existing key and issues a replacement with the same name and scopes.
+func (s *Service) RotateKey(ctx context.Context, p tenancy.Principal, id string) (Key, string, error) {
+	var key Key
+	if !uuidPattern.MatchString(id) {
+		return key, "", ErrNotFound
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return key, "", err
+	}
+	defer tx.Rollback(context.Background())
+	if _, err = tx.Exec(ctx, "SELECT id FROM organizations WHERE id=$1 FOR UPDATE", p.OrganizationID); err != nil {
+		return key, "", err
+	}
+	if !authorized(ctx, tx, p, "keys:manage") {
+		return key, "", ErrDenied
+	}
+	if err = tx.QueryRow(ctx, "SELECT name,scopes FROM api_keys WHERE organization_id=$1 AND id=$2 AND revoked_at IS NULL FOR UPDATE", p.OrganizationID, id).Scan(&key.Name, &key.Scopes); errors.Is(err, pgx.ErrNoRows) {
+		return key, "", ErrNotFound
+	} else if err != nil {
+		return key, "", err
+	}
+	if _, err = tx.Exec(ctx, "UPDATE api_keys SET revoked_at=$3 WHERE organization_id=$1 AND id=$2 AND revoked_at IS NULL", p.OrganizationID, id, s.now()); err != nil {
+		return key, "", err
+	}
+	token := "rj_" + RandomToken()
+	key.Prefix = token[:11]
+	if err = tx.QueryRow(ctx, "INSERT INTO api_keys(organization_id,created_by,name,prefix,token_hash,scopes) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text,created_at", p.OrganizationID, p.UserID, key.Name, key.Prefix, Digest(token), key.Scopes).Scan(&key.ID, &key.CreatedAt); err != nil {
+		return key, "", err
+	}
+	if err = audit(ctx, tx, p, "api_key.rotated", key.ID); err != nil {
+		return key, "", err
+	}
+	return key, token, tx.Commit(ctx)
+}
+
 type APIAccess struct {
 	Principal tenancy.Principal
 	EventID   string
 }
 
-func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billable bool) (APIAccess, error) {
+func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billable bool, feature ...string) (APIAccess, error) {
 	var access APIAccess
 	if len(token) < 32 || len(token) > 200 {
 		return access, ErrCredentials
@@ -140,14 +177,26 @@ func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billabl
 	if !allowed || !p.Can(scope) {
 		return access, ErrDenied
 	}
+	module := ""
+	if len(feature) > 0 {
+		module = feature[0]
+	}
+	now := s.now()
+	today := now.In(s.location).Format("2006-01-02")
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return access, err
 	}
 	defer tx.Rollback(context.Background())
 	var monthly, rpm int
-	if err = tx.QueryRow(ctx, "SELECT monthly_limit,requests_per_minute FROM organization_limits WHERE organization_id=$1 FOR UPDATE", p.OrganizationID).Scan(&monthly, &rpm); err != nil {
+	var planAllowed bool
+	if err = tx.QueryRow(ctx, `SELECT l.monthly_limit,l.requests_per_minute,
+ (pl.active AND 'api'=ANY(pl.features) AND $2::date>=l.effective_from AND (l.effective_until IS NULL OR $2::date<=l.effective_until) AND ($3='' OR $3=ANY(pl.features)))
+ FROM organization_limits l JOIN plans pl ON pl.code=l.plan_code WHERE l.organization_id=$1 FOR UPDATE OF l`, p.OrganizationID, today, module).Scan(&monthly, &rpm, &planAllowed); err != nil {
 		return access, err
+	}
+	if !planAllowed {
+		return access, ErrDenied
 	}
 	// A key revoked while this transaction waits must not acquire a new reservation.
 	var valid bool
@@ -161,7 +210,7 @@ func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billabl
 	}
 	var attempts int
 	err = tx.QueryRow(ctx, `INSERT INTO auth_buckets(purpose,bucket_hash,window_start,attempts) VALUES('api-org',$1,$2,1)
- ON CONFLICT(purpose,bucket_hash,window_start) DO UPDATE SET attempts=LEAST(auth_buckets.attempts+1,1000000) RETURNING attempts`, Digest(p.OrganizationID), s.now().Truncate(time.Minute)).Scan(&attempts)
+ ON CONFLICT(purpose,bucket_hash,window_start) DO UPDATE SET attempts=LEAST(auth_buckets.attempts+1,1000000) RETURNING attempts`, Digest(p.OrganizationID), now.Truncate(time.Minute)).Scan(&attempts)
 	if err != nil {
 		return access, err
 	}
@@ -171,7 +220,6 @@ func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billabl
 		}
 		return access, ErrRate
 	}
-	now := s.now()
 	period := now.In(s.location).Format("2006-01") + "-01"
 	if _, err = tx.Exec(ctx, "INSERT INTO quota_periods(organization_id,period) VALUES($1,$2::date) ON CONFLICT DO NOTHING", p.OrganizationID, period); err != nil {
 		return access, err
@@ -182,6 +230,9 @@ func (s *Service) BeginAPI(ctx context.Context, token, scope, ip string, billabl
 			return access, err
 		}
 		if tag.RowsAffected() != 1 {
+			if _, err = tx.Exec(ctx, "UPDATE quota_periods SET blocked=blocked+1 WHERE organization_id=$1 AND period=$2::date", p.OrganizationID, period); err != nil {
+				return access, err
+			}
 			if err = tx.Commit(ctx); err != nil {
 				return access, err
 			}
@@ -259,4 +310,22 @@ func APIRequirement(path, method string) (string, bool) {
 		return "calculations:run", true
 	}
 	return "account:read", false
+}
+func APIModule(path string) string {
+	switch {
+	case strings.Contains(path, "/cnj/"):
+		return "cnj"
+	case strings.HasSuffix(path, "/calculos/judicial"):
+		return "judicial"
+	case strings.HasSuffix(path, "/simulacoes/liquidacao"):
+		return "liquidacao"
+	case strings.HasSuffix(path, "/calculos/financiamento") || strings.HasSuffix(path, "/simulacoes/financiamento"):
+		return "financiamento"
+	case strings.HasSuffix(path, "/simulacoes/prazos"):
+		return "prazos"
+	case strings.HasSuffix(path, "/calculos/indices"):
+		return "indices"
+	default:
+		return ""
+	}
 }

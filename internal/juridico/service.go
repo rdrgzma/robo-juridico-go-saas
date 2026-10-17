@@ -43,6 +43,7 @@ func New(pool *pgxpool.Pool, identity *auth.Service, key []byte, sources *Source
 	}
 	return &Service{pool: pool, identity: identity, reportKey: h.Sum(nil), sources: sources}
 }
+func (s *Service) Sources() *Sources { return s.sources }
 
 type Operation struct {
 	ID             string          `json:"id"`
@@ -200,12 +201,15 @@ func (s *Service) Run(ctx context.Context, p tenancy.Principal, kind, title, req
 	}
 	defer tx.Rollback(context.Background())
 	var limit int
-	// The same lock and quota period are shared with API calls.
-	err = tx.QueryRow(ctx, `SELECT l.monthly_limit FROM organization_limits l JOIN organizations org ON org.id=l.organization_id
+	var planAllowed bool
+	// The same lock, plan authorization, and quota period are shared with API calls.
+	err = tx.QueryRow(ctx, `SELECT l.monthly_limit,
+ (pl.active AND $3=ANY(pl.features) AND (now() AT TIME ZONE 'America/Sao_Paulo')::date>=l.effective_from AND (l.effective_until IS NULL OR (now() AT TIME ZONE 'America/Sao_Paulo')::date<=l.effective_until))
+ FROM organization_limits l JOIN plans pl ON pl.code=l.plan_code JOIN organizations org ON org.id=l.organization_id
  JOIN memberships m ON m.organization_id=org.id JOIN users u ON u.id=m.user_id
  WHERE org.id=$1 AND u.id=$2 AND org.active AND u.active AND m.active AND EXISTS
- (SELECT 1 FROM role_permissions rp WHERE rp.role_code=m.role_code AND rp.permission_code='calculations:run') FOR UPDATE OF l`, p.OrganizationID, p.UserID).Scan(&limit)
-	if errors.Is(err, pgx.ErrNoRows) {
+ (SELECT 1 FROM role_permissions rp WHERE rp.role_code=m.role_code AND rp.permission_code='calculations:run') FOR UPDATE OF l`, p.OrganizationID, p.UserID, kind).Scan(&limit, &planAllowed)
+	if errors.Is(err, pgx.ErrNoRows) || !planAllowed {
 		return o, auth.ErrDenied
 	}
 	if err != nil {
@@ -230,6 +234,12 @@ func (s *Service) Run(ctx context.Context, p tenancy.Principal, kind, title, req
 			return o, e
 		}
 		if tag.RowsAffected() != 1 {
+			if _, err = tx.Exec(ctx, `UPDATE quota_periods SET blocked=blocked+1 WHERE organization_id=$1 AND period=date_trunc('month',now() AT TIME ZONE 'America/Sao_Paulo')::date`, p.OrganizationID); err != nil {
+				return o, err
+			}
+			if err = tx.Commit(ctx); err != nil {
+				return o, err
+			}
 			return o, auth.ErrQuota
 		}
 	}

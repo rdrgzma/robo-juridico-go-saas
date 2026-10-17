@@ -246,20 +246,9 @@ func (s *Service) Mount(r chi.Router) {
 	r.Get("/account", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		render(w, 200, view{View: "account", Title: "Minha identidade", Principal: p, CSRF: s.CSRF(token)})
 	}))
-	for _, path := range []string{"/portal", "/admin"} {
-		path := path
-		r.Get(path, s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
-			if path == "/admin" && (!p.PlatformAdmin || p.RequiresMFA()) {
-				http.Error(w, "Acesso administrativo requer permissão global e MFA", 403)
-				return
-			}
-			if path == "/app" && !p.Can("calculations:run") {
-				http.Error(w, "Sem permissão para o painel jurídico", 403)
-				return
-			}
-			render(w, 200, view{View: "account", Title: map[string]string{"/app": "Área jurídica autenticada", "/portal": "Portal autenticado", "/admin": "Identidade administrativa verificada"}[path], Principal: p, CSRF: s.CSRF(token), Notice: "A identidade e o acesso estão ativos. As funções operacionais deste painel serão entregues nas sprints seguintes."})
-		}))
-	}
+	r.Get("/portal", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
+		render(w, 200, view{View: "account", Title: "Portal autenticado", Principal: p, CSRF: s.CSRF(token), Notice: "A identidade e o acesso estão ativos. As funções operacionais deste painel serão entregues nas sprints seguintes."})
+	}))
 	r.Get("/account/members", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		members, err := s.Members(r.Context(), p)
 		if err != nil {
@@ -301,6 +290,22 @@ func (s *Service) Mount(r chi.Router) {
 			return
 		}
 		render(w, 201, view{View: "keys", Title: "Chave emitida", Principal: p, CSRF: s.CSRF(token), Keys: keys, NewKey: raw, Notice: "Guarde a chave agora. Ela não será exibida novamente."})
+	}))
+	r.Post("/account/keys/{id}/rotate", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
+		if !s.form(w, r, token, false) {
+			return
+		}
+		_, raw, err := s.RotateKey(r.Context(), p, chi.URLParam(r, "id"))
+		if err != nil {
+			http.Error(w, "Não foi possível rotacionar a chave", statusFor(err))
+			return
+		}
+		keys, err := s.Keys(r.Context(), p)
+		if err != nil {
+			http.Error(w, "Chave rotacionada; falha ao carregar lista", 503)
+			return
+		}
+		render(w, 201, view{View: "keys", Title: "Chave rotacionada", Principal: p, CSRF: s.CSRF(token), Keys: keys, NewKey: raw, Notice: "A chave anterior foi revogada. Guarde a nova chave agora; ela não será exibida novamente."})
 	}))
 	r.Post("/account/keys/{id}/revoke", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		if !s.form(w, r, token, false) {
@@ -380,7 +385,18 @@ func (s *Service) Web(permission string, next http.HandlerFunc) http.HandlerFunc
 	})
 }
 
-// ValidateWebForm must be called for every workspace mutation, after Web.
+// WebAdmin authenticates the session and enforces global platform_admin access and active MFA policy.
+func (s *Service) WebAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
+		if !p.PlatformAdmin || p.RequiresMFA() {
+			http.Error(w, "Acesso administrativo requer permissão global e MFA", 403)
+			return
+		}
+		next(w, r)
+	})
+}
+
+// ValidateWebForm must be called for every workspace or admin mutation, after Web/WebAdmin.
 func (s *Service) ValidateWebForm(w http.ResponseWriter, r *http.Request) bool {
 	return s.form(w, r, readCookie(r, sessionCookie), false)
 }

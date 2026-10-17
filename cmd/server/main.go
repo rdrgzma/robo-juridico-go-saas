@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/admin"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/auth"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/config"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/juridico"
@@ -44,7 +45,8 @@ func main() {
 		os.Exit(1)
 	}
 	workspace := juridico.New(pool, identity, cfg.AuthKey, juridico.NewSources(os.Getenv("DATAJUD_API_KEY"), os.Getenv("DJEN_ENABLED") == "true"))
-	server := &http.Server{Addr: cfg.Address, Handler: transport.NewWithWorkspace(cfg.APIKeyHash, logger, identity, workspace, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
+	adminPanel := admin.New(pool, identity, workspace)
+	server := &http.Server{Addr: cfg.Address, Handler: transport.NewWithAdmin(cfg.APIKeyHash, logger, identity, workspace, adminPanel, ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() {
@@ -74,7 +76,7 @@ func main() {
 			_ = server.Close()
 		}
 	}()
-	logger.Info("listening", "address", cfg.Address, "sprint", 3)
+	logger.Info("listening", "address", cfg.Address, "sprint", 4)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server", "error", err)
 		os.Exit(1)

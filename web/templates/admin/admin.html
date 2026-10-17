@@ -1,0 +1,560 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{.Title}} · Administração · Robô Jurídico</title><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script></head><body>
+<aside class="sidebar">
+  <a class="brand" href="/admin"><span class="brand-mark">⚙</span><span>Robô Jurídico<small>Administração global</small></span></a>
+  <nav aria-label="Administração global">
+    <a href="/admin" {{if eq .View "dashboard"}}aria-current="page"{{end}}>▦ Dashboard</a>
+    <a href="/admin/organizations" {{if or (eq .View "organizations") (eq .View "organization_detail")}}aria-current="page"{{end}}>▤ Clientes e organizações</a>
+    <a href="/admin/plans" {{if eq .View "plans"}}aria-current="page"{{end}}>⚖ Planos e recursos</a>
+    <a href="/admin/users" {{if eq .View "users"}}aria-current="page"{{end}}>◉ Usuários e acesso</a>
+    <a href="/admin/keys" {{if eq .View "keys"}}aria-current="page"{{end}}>⌗ Chaves e cotas</a>
+    <a href="/admin/operations" {{if eq .View "operations"}}aria-current="page"{{end}}>↗ Gestão jurídica e índices</a>
+    <a href="/admin/audit" {{if eq .View "audit"}}aria-current="page"{{end}}>▣ Auditoria</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <a href="/app">Espaço jurídico (/app) ↗</a>
+    <a href="/portal">Portal do cliente (/portal) ↗</a>
+    <a href="/account">Minha conta e segurança ↗</a>
+    <button type="button" id="theme-toggle">Alternar tema</button>
+    <small>{{.Principal.Organization}} · platform_admin</small>
+  </div>
+</aside>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">ADMINISTRAÇÃO GLOBAL DA PLATAFORMA</p>
+      <h1>{{.Title}}</h1>
+    </div>
+    <span class="environment">platform_admin verificado</span>
+  </header>
+  {{if .Notice}}<div class="notice">{{.Notice}}</div>{{end}}
+  {{if .Error}}<div class="alert" role="alert">{{.Error}}</div>{{end}}
+  {{if .NewKey}}<div class="notice"><strong>Segredo emitido (exibição única):</strong><pre>{{.NewKey}}</pre></div>{{end}}
+
+  {{if eq .View "dashboard"}}
+  <p class="intro">Indicadores operacionais derivados em tempo real do PostgreSQL e do roteador HTTP. Nenhuma cobrança externa ou emissão de laudo homologado é simulada.</p>
+  <section class="metrics">
+    <article><span>Organizações ativas</span><strong>{{.Dashboard.ActiveOrganizations}} <small>/ {{.Dashboard.TotalOrganizations}}</small></strong><small>{{.Dashboard.ActiveUsers}} / {{.Dashboard.TotalUsers}} usuários ativos · {{.Dashboard.ActiveMemberships}} vínculos ativos</small></article>
+    <article><span>Receita recorrente contratada (MRR)</span><strong>R$ {{.Dashboard.EstimatedMRR}}</strong><small>Estimativa baseada nos contratos vigentes de organizações ativas</small></article>
+    <article><span>Consultas e cálculos</span><strong>{{.Dashboard.TotalOperations}} <small>total</small></strong><small>No mês: {{.Dashboard.MonthQueries}} consultas · {{.Dashboard.MonthCalculations}} cálculos</small></article>
+    <article><span>Consumo no mês (API + painel)</span><strong>{{.Dashboard.MonthQuotaUsed}} <small>/ {{.Dashboard.MonthQuotaLimit}}</small></strong><small>API concluída: {{.Dashboard.MonthAPICompleted}} · Reservas pendentes: {{.Dashboard.MonthAPIPending}} · Estornos: {{.Dashboard.MonthAPIRefunded}}</small></article>
+    <article><span>Bloqueios por cota</span><strong>{{.Dashboard.MonthQuotaBlocked}} <small>no mês</small></strong><small>Pontos de índices sincronizados: {{.Dashboard.SyncedIndexPoints}}</small></article>
+    <article><span>Laudos e leads</span><strong>{{.Dashboard.HomologatedReports}} <small>laudos</small></strong><small>Leads captados: {{.Dashboard.CapturedLeads}} (módulos não habilitados)</small></article>
+  </section>
+
+  <h2>Telemetria HTTP e integrações externas</h2>
+  <section class="metrics">
+    <article><span>Requisições HTTP desde o início</span><strong>{{.Dashboard.HTTPRequests}}</strong><small>Erros 4xx: {{.Dashboard.HTTPClientErrors}} · Erros 5xx: {{.Dashboard.HTTPServerErrors}}</small></article>
+    <article><span>Tempo médio de resposta</span><strong>{{.Dashboard.AvgLatencyMs}} <small>ms</small></strong><small>Máximo observado: {{.Dashboard.MaxLatencyMs}} ms</small></article>
+    <article><span>Estado das integrações</span><strong>{{len .Dashboard.Integrations}} <small>fontes</small></strong><small>Consulte o detalhamento abaixo</small></article>
+  </section>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Integração</th><th>Estado</th><th>Detalhe operacional</th></tr></thead>
+      <tbody>
+        {{range .Dashboard.Integrations}}
+        <tr><td>{{.Name}}</td><td><strong>{{.Status}}</strong></td><td>{{.Detail}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+
+  {{if eq .View "organizations"}}
+  <p class="intro">Pesquise, cadastre e gerencie clientes, planos contratados, franquias mensais e situação operacional.</p>
+  <form method="get" action="/admin/organizations">
+    <div class="form-grid">
+      <label>Pesquisar (nome, slug, razão social, CNPJ/CPF ou responsável)<input name="q" value="{{.Query}}" placeholder="Ex.: Escritório Silva"></label>
+      <label>Estado<select name="status"><option value="">Todos</option><option value="active" {{if eq .StatusFilter "active"}}selected{{end}}>Ativos</option><option value="suspended" {{if eq .StatusFilter "suspended"}}selected{{end}}>Suspensos</option></select></label>
+      <label>Plano<select name="plan"><option value="">Todos</option>{{range .Plans}}<option value="{{.Code}}" {{if eq $.PlanFilter .Code}}selected{{end}}>{{.Name}} ({{.Code}})</option>{{end}}</select></label>
+    </div>
+    <div class="actions"><button>Filtrar organizações</button><a class="button secondary" href="/admin/organizations">Limpar filtros</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Organização</th><th>Documento / Responsável</th><th>Plano</th><th>Mensalidade contratada</th><th>Consumo no mês</th><th>Bloqueios</th><th>Vigência</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {{range .Organizations}}
+        <tr>
+          <td><strong>{{.Name}}</strong><br><small>{{.Slug}} · {{.MemberCount}} membros</small></td>
+          <td>{{if .LegalName}}{{.LegalName}}<br>{{end}}<small>{{.Document}} {{if .ContactEmail}}· {{.ContactEmail}}{{end}}</small></td>
+          <td>{{.PlanName}} (<code>{{.PlanCode}}</code>)</td>
+          <td>R$ {{.ContractedPrice.StringFixed 2}}</td>
+          <td>{{.MonthUsed}} / {{.MonthlyLimit}} ({{.RequestsPerMinute}} rpm)</td>
+          <td>{{.MonthBlocked}}</td>
+          <td>{{.EffectiveFrom}}{{if .EffectiveUntil}} até {{.EffectiveUntil}}{{end}}</td>
+          <td>{{if .Active}}Ativa{{else}}Suspensa{{end}}</td>
+          <td><a href="/admin/organizations/{{.ID}}">Gerenciar →</a></td>
+        </tr>
+        {{else}}
+        <tr><td colspan="9">Nenhuma organização encontrada para os filtros informados.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>Cadastrar novo cliente e organização</summary>
+    <form method="post" action="/admin/organizations">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <div class="form-grid">
+        <label>Identificador (slug)<input name="slug" required pattern="[a-z0-9][a-z0-9-]{1,62}" placeholder="escritorio-exemplo"></label>
+        <label>Nome fantasia / exibição<input name="name" required maxlength="160" placeholder="Escritório Exemplo"></label>
+        <label>Razão social<input name="legal_name" maxlength="200" placeholder="Escritório Exemplo Sociedade de Advogados"></label>
+        <label>CNPJ ou CPF<input name="document" maxlength="40" placeholder="00.000.000/0001-00"></label>
+        <label>Responsável contratual<input name="contact_name" maxlength="160"></label>
+        <label>E-mail do responsável<input name="contact_email" type="email" maxlength="200"></label>
+        <label>E-mail do usuário proprietário inicial (owner)<input name="owner_email" type="email" required></label>
+        <label>Senha inicial do proprietário (mín. 12 caracteres)<input name="owner_password" type="password" required minlength="12"></label>
+        <label>Plano contratado<select name="plan_code">{{range .Plans}}<option value="{{.Code}}">{{.Name}} ({{.Code}} — R$ {{.MonthlyPrice.StringFixed 2}})</option>{{end}}</select></label>
+        <label>Valor mensal contratado (R$)<input name="contracted_price" inputmode="decimal" placeholder="0.00"></label>
+        <label>Franquia mensal (0 usa padrão do plano)<input name="monthly_limit" type="number" min="0" max="10000000" value="0"></label>
+        <label>Limite por minuto RPM (0 usa padrão do plano)<input name="requests_per_minute" type="number" min="0" max="100000" value="0"></label>
+        <label>Início de vigência<input name="effective_from" type="date" value="{{.Today}}"></label>
+        <label>Fim de vigência (opcional)<input name="effective_until" type="date"></label>
+      </div>
+      <label>Observações cadastrais<textarea name="notes" rows="2" maxlength="2000"></textarea></label>
+      <label>Observações contratuais iniciais<textarea name="contract_notes" rows="2" maxlength="1000"></textarea></label>
+      <button>Criar organização e contrato</button>
+    </form>
+  </details>
+  {{end}}
+
+  {{if eq .View "organization_detail"}}
+  <p class="intro"><a href="/admin/organizations">← Voltar para clientes e organizações</a></p>
+  <section class="metrics">
+    <article><span>Estado da organização</span><strong>{{if .Detail.Organization.Active}}Ativa{{else}}Suspensa{{end}}</strong><small>Slug: {{.Detail.Organization.Slug}} · ID: {{.Detail.Organization.ID}}</small></article>
+    <article><span>Plano e mensalidade</span><strong>{{.Detail.Organization.PlanName}}</strong><small>R$ {{.Detail.Organization.ContractedPrice.StringFixed 2}} / mês · Vigência desde {{.Detail.Organization.EffectiveFrom}}{{if .Detail.Organization.EffectiveUntil}} até {{.Detail.Organization.EffectiveUntil}}{{end}}</small></article>
+    <article><span>Consumo no mês atual</span><strong>{{.Detail.Organization.MonthUsed}} <small>/ {{.Detail.Organization.MonthlyLimit}}</small></strong><small>Limite: {{.Detail.Organization.RequestsPerMinute}} req/min · Bloqueios: {{.Detail.Organization.MonthBlocked}}</small></article>
+  </section>
+
+  <div class="actions">
+    <form method="post" action="/admin/organizations/{{.Detail.Organization.ID}}/status" style="margin:0;padding:0;border:0;background:transparent">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      {{if .Detail.Organization.Active}}
+      <input type="hidden" name="active" value="false">
+      <button class="secondary">Suspender organização (revoga sessões ativas)</button>
+      {{else}}
+      <input type="hidden" name="active" value="true">
+      <button>Reativar organização</button>
+      {{end}}
+    </form>
+  </div>
+
+  <h2>Dados cadastrais e responsável</h2>
+  <form method="post" action="/admin/organizations/{{.Detail.Organization.ID}}">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Nome de exibição<input name="name" required maxlength="160" value="{{.Detail.Organization.Name}}"></label>
+      <label>Razão social<input name="legal_name" maxlength="200" value="{{.Detail.Organization.LegalName}}"></label>
+      <label>CNPJ / CPF<input name="document" maxlength="40" value="{{.Detail.Organization.Document}}"></label>
+      <label>Responsável<input name="contact_name" maxlength="160" value="{{.Detail.Organization.ContactName}}"></label>
+      <label>E-mail do responsável<input name="contact_email" type="email" maxlength="200" value="{{.Detail.Organization.ContactEmail}}"></label>
+    </div>
+    <label>Observações internas<textarea name="notes" rows="3" maxlength="2000">{{.Detail.Organization.Notes}}</textarea></label>
+    <button>Salvar dados cadastrais</button>
+  </form>
+
+  <h2>Plano, condições comerciais e franquias</h2>
+  <form method="post" action="/admin/organizations/{{.Detail.Organization.ID}}/contract">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Plano associado<select name="plan_code">{{range .Plans}}<option value="{{.Code}}" {{if eq $.Detail.Organization.PlanCode .Code}}selected{{end}}>{{.Name}} ({{.Code}} — Recursos: {{range $i, $f := .Features}}{{if $i}}, {{end}}{{$f}}{{end}})</option>{{end}}</select></label>
+      <label>Valor mensal contratado (R$)<input name="contracted_price" required inputmode="decimal" value="{{.Detail.Organization.ContractedPrice.StringFixed 2}}"></label>
+      <label>Franquia mensal de operações<input name="monthly_limit" type="number" min="1" max="10000000" required value="{{.Detail.Organization.MonthlyLimit}}"></label>
+      <label>Limite por minuto (RPM)<input name="requests_per_minute" type="number" min="1" max="100000" required value="{{.Detail.Organization.RequestsPerMinute}}"></label>
+      <label>Vigência inicial<input name="effective_from" type="date" required value="{{.Detail.Organization.EffectiveFrom}}"></label>
+      <label>Vigência final (vazio = indeterminada)<input name="effective_until" type="date" value="{{.Detail.Organization.EffectiveUntil}}"></label>
+    </div>
+    <label>Motivo / observações da alteração contratual<textarea name="notes" rows="2" maxlength="1000">{{.Detail.Organization.ContractNotes}}</textarea></label>
+    <p class="help">Alterações de plano e franquia têm efeito imediato na autorização de módulos e no limite mensal do período corrente, preservando o consumo já contabilizado no mês.</p>
+    <button>Atualizar contrato e registrar histórico</button>
+  </form>
+
+  <h2>Histórico de alterações contratuais</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Plano</th><th>Valor (R$)</th><th>Franquia / RPM</th><th>Vigência</th><th>Autor</th><th>Observações</th></tr></thead>
+      <tbody>
+        {{range .Detail.ContractHistory}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td><code>{{.PlanCode}}</code></td>
+          <td>R$ {{.ContractedPrice.StringFixed 2}}</td>
+          <td>{{.MonthlyLimit}} / {{.RequestsPerMinute}} rpm</td>
+          <td>{{.EffectiveFrom}}{{if .EffectiveUntil}} → {{.EffectiveUntil}}{{end}}</td>
+          <td>{{.ActorEmail}}</td>
+          <td>{{.Notes}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="7">Nenhuma alteração contratual registrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Membros da organização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>E-mail</th><th>Papel na organização</th><th>Estado do vínculo</th><th>Estado do usuário</th><th>Admin global</th></tr></thead>
+      <tbody>
+        {{range .Detail.Members}}
+        <tr>
+          <td>{{.Email}}</td>
+          <td><code>{{.Role}}</code></td>
+          <td>{{if .Active}}Ativo{{else}}Inativo{{end}}</td>
+          <td>{{if .UserActive}}Ativo{{else}}Suspenso{{end}}</td>
+          <td>{{if .PlatformAdmin}}Sim{{else}}Não{{end}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5">Nenhum membro vinculado.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Chaves de API da organização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nome</th><th>Prefixo</th><th>Escopos</th><th>Criada em</th><th>Último uso</th><th>Estado</th></tr></thead>
+      <tbody>
+        {{range .Detail.Keys}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td><code>{{.Prefix}}</code></td>
+          <td>{{range $i, $s := .Scopes}}{{if $i}}, {{end}}<code>{{$s}}</code>{{end}}</td>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td>{{if .LastUsed}}{{.LastUsed.Format "02/01/2006 15:04"}}{{else}}Nunca utilizada{{end}}</td>
+          <td>{{if .RevokedAt}}Revogada{{else}}Ativa{{end}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6">Nenhuma chave emitida para esta organização.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+
+  {{if eq .View "plans"}}
+  <p class="intro">Defina os planos comerciais e os módulos habilitados em cada plano. A autorização é aplicada no backend tanto no painel jurídico (<code>/app</code>) quanto na API (<code>/api/v1</code>).</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Código</th><th>Nome</th><th>Preço base (R$)</th><th>Franquia padrão</th><th>RPM padrão</th><th>Recursos autorizados</th><th>Organizações</th><th>Estado</th></tr></thead>
+      <tbody>
+        {{range .Plans}}
+        <tr>
+          <td><code>{{.Code}}</code></td>
+          <td><strong>{{.Name}}</strong></td>
+          <td>R$ {{.MonthlyPrice.StringFixed 2}}</td>
+          <td>{{.MonthlyLimit}} / mês</td>
+          <td>{{.RequestsPerMinute}} req/min</td>
+          <td>{{range $i, $f := .Features}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}</td>
+          <td>{{.Organizations}}</td>
+          <td>{{if .Active}}Ativo{{else}}Inativo{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Cadastrar ou atualizar plano</h2>
+  <form method="post" action="/admin/plans">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Código do plano (slug)<input name="code" required pattern="[a-z0-9][a-z0-9_-]{1,38}" placeholder="empresarial"></label>
+      <label>Nome comercial<input name="name" required maxlength="120" placeholder="Empresarial"></label>
+      <label>Mensalidade de referência (R$)<input name="monthly_price" required inputmode="decimal" value="0.00"></label>
+      <label>Franquia mensal padrão<input name="monthly_limit" type="number" min="1" max="10000000" required value="1000"></label>
+      <label>Limite por minuto padrão (RPM)<input name="requests_per_minute" type="number" min="1" max="100000" required value="60"></label>
+    </div>
+    <p><strong>Recursos autorizados pelo plano:</strong></p>
+    {{range .AllowedFeatures}}
+    <label class="check"><input type="checkbox" name="feature" value="{{.}}" checked> <code>{{.}}</code></label>
+    {{end}}
+    <label class="check"><input type="checkbox" name="active" value="true" checked> Plano ativo (planos inativos bloqueiam o uso pelas organizações vinculadas)</label>
+    <button>Salvar plano</button>
+  </form>
+  {{end}}
+
+  {{if eq .View "users"}}
+  <p class="intro">Gerencie usuários, papéis por organização (<code>owner</code>, <code>admin</code>, <code>lawyer</code>, <code>viewer</code>), atribuição global <code>platform_admin</code>, sessões ativas e recuperação de acesso.</p>
+  <form method="get" action="/admin/users">
+    <label>Pesquisar por e-mail<input name="q" value="{{.Query}}" placeholder="usuario@exemplo.com.br"></label>
+    <div class="actions"><button>Buscar usuários</button><a class="button secondary" href="/admin/users">Ver todos</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Usuário</th><th>Estado / Segurança</th><th>Vínculos com organizações</th><th>Ações de segurança</th></tr></thead>
+      <tbody>
+        {{range $u := .Users}}
+        <tr>
+          <td><strong>{{$u.Email}}</strong><br><small>ID: {{$u.ID}} · Criado em {{$u.CreatedAt.Format "02/01/2006"}}</small></td>
+          <td>
+            Conta: <strong>{{if $u.Active}}Ativa{{else}}Suspensa{{end}}</strong><br>
+            Global: <strong>{{if $u.PlatformAdmin}}platform_admin{{else}}Padrão{{end}}</strong><br>
+            MFA: {{if $u.MFAEnabled}}Configurado{{else}}Não configurado{{end}} · Sessões ativas: {{$u.ActiveSessions}}
+          </td>
+          <td>
+            {{range $m := $u.Memberships}}
+            <form method="post" action="/admin/users/{{$u.ID}}/membership" style="margin:6px 0;padding:10px">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="organization_id" value="{{$m.OrganizationID}}">
+              <strong>{{$m.OrganizationName}}</strong> (<code>{{$m.OrganizationSlug}}</code>)
+              <select name="role">
+                <option value="owner" {{if eq $m.Role "owner"}}selected{{end}}>owner</option>
+                <option value="admin" {{if eq $m.Role "admin"}}selected{{end}}>admin</option>
+                <option value="lawyer" {{if eq $m.Role "lawyer"}}selected{{end}}>lawyer</option>
+                <option value="viewer" {{if eq $m.Role "viewer"}}selected{{end}}>viewer</option>
+              </select>
+              <label class="check"><input type="checkbox" name="active" value="true" {{if $m.Active}}checked{{end}}> Vínculo ativo</label>
+              <button class="secondary">Atualizar vínculo</button>
+            </form>
+            {{else}}
+            <small>Sem vínculos cadastrados.</small>
+            {{end}}
+          </td>
+          <td>
+            <form method="post" action="/admin/users/{{$u.ID}}/status" style="margin:4px 0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="active" value="{{if $u.Active}}false{{else}}true{{end}}">
+              <button class="secondary">{{if $u.Active}}Suspender usuário{{else}}Reativar usuário{{end}}</button>
+            </form>
+            <form method="post" action="/admin/users/{{$u.ID}}/platform-admin" style="margin:4px 0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="platform_admin" value="{{if $u.PlatformAdmin}}false{{else}}true{{end}}">
+              <button class="secondary">{{if $u.PlatformAdmin}}Remover platform_admin{{else}}Conceder platform_admin{{end}}</button>
+            </form>
+            <form method="post" action="/admin/users/{{$u.ID}}/revoke-sessions" style="margin:4px 0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Revogar sessões ({{$u.ActiveSessions}})</button>
+            </form>
+            <form method="post" action="/admin/users/{{$u.ID}}/recover" style="margin:4px 0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Gerar recuperação no outbox</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Provisionar usuário ou vincular a organização</h2>
+  <form method="post" action="/admin/users">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Organização<select name="organization_id" required>{{range .Organizations}}<option value="{{.ID}}">{{.Name}} ({{.Slug}})</option>{{end}}</select></label>
+      <label>E-mail do usuário<input name="email" type="email" required></label>
+      <label>Senha inicial (mín. 12 caracteres; ignorada se o usuário já existir)<input name="password" type="password" minlength="12"></label>
+      <label>Papel na organização<select name="role"><option value="lawyer">lawyer</option><option value="viewer">viewer</option><option value="admin">admin</option><option value="owner">owner</option></select></label>
+    </div>
+    <label class="check"><input type="checkbox" name="platform_admin" value="true"> Conceder também atribuição global <code>platform_admin</code></label>
+    <button>Salvar usuário e vínculo</button>
+  </form>
+  {{end}}
+
+  {{if eq .View "keys"}}
+  <p class="intro">Controle de chaves de API por organização, rotação com revogação imediata da chave anterior e acompanhamento de cotas, reservas, estornos e bloqueios.</p>
+  <form method="get" action="/admin/keys">
+    <label>Filtrar por organização<select name="org"><option value="">Todas as organizações</option>{{range .Organizations}}<option value="{{.ID}}" {{if eq $.OrgFilter .ID}}selected{{end}}>{{.Name}} ({{.Slug}})</option>{{end}}</select></label>
+    <div class="actions"><button>Filtrar</button><a class="button secondary" href="/admin/keys">Limpar</a></div>
+  </form>
+
+  <h2>Consumo, reservas, estornos e bloqueios no mês atual</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Organização</th><th>Plano</th><th>Consumo / Franquia</th><th>RPM</th><th>Reservas pendentes</th><th>Concluídas</th><th>Estornadas</th><th>Bloqueios</th></tr></thead>
+      <tbody>
+        {{range .Quotas}}
+        <tr>
+          <td><strong>{{.OrganizationName}}</strong><br><small>{{.OrganizationSlug}}</small></td>
+          <td><code>{{.PlanCode}}</code></td>
+          <td>{{.Used}} / {{.MonthlyLimit}}</td>
+          <td>{{.RequestsPerMinute}}</td>
+          <td>{{.PendingEvents}}</td>
+          <td>{{.CompletedEvents}}</td>
+          <td>{{.RefundedEvents}}</td>
+          <td>{{.Blocked}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8">Nenhuma organização encontrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Chaves de API emitidas</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Organização</th><th>Nome</th><th>Prefixo</th><th>Escopos</th><th>Criada em</th><th>Último acesso</th><th>Estado</th><th>Ações</th></tr></thead>
+      <tbody>
+        {{range .Keys}}
+        <tr>
+          <td><code>{{.OrganizationSlug}}</code></td>
+          <td>{{.Name}}</td>
+          <td><code>{{.Prefix}}</code></td>
+          <td>{{range $i, $s := .Scopes}}{{if $i}}, {{end}}<code>{{$s}}</code>{{end}}</td>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td>{{if .LastUsed}}{{.LastUsed.Format "02/01/2006 15:04"}}{{else}}Nunca{{end}}</td>
+          <td>{{if .RevokedAt}}Revogada{{else}}Ativa{{end}}</td>
+          <td>
+            {{if not .RevokedAt}}
+            <form method="post" action="/admin/keys/{{.ID}}/rotate" style="display:inline;margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Rotacionar</button>
+            </form>
+            <form method="post" action="/admin/keys/{{.ID}}/revoke" style="display:inline;margin:0;padding:0;border:0;background:transparent">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <button class="secondary">Revogar</button>
+            </form>
+            {{else}}<small>Encerrada</small>{{end}}
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8">Nenhuma chave cadastrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Emitir nova chave para organização</h2>
+  <form method="post" action="/admin/keys">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Organização<select name="organization_id" required>{{range .Organizations}}<option value="{{.ID}}">{{.Name}} ({{.Slug}})</option>{{end}}</select></label>
+      <label>Identificação da chave<input name="name" required maxlength="80" placeholder="Integração ERP"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="scope" value="calculations:run" checked> <code>calculations:run</code> (consultas CNJ, índices e cálculos)</label>
+    <label class="check"><input type="checkbox" name="scope" value="account:read" checked> <code>account:read</code> (leitura de identidade /v1/me)</label>
+    <button>Emitir chave</button>
+  </form>
+  {{end}}
+
+  {{if eq .View "operations"}}
+  <p class="intro">Acompanhamento de consultas e cálculos realizados pelas organizações, estado das integrações oficiais e sincronização controlada de índices econômicos.</p>
+
+  <h2>Sincronização controlada de índices econômicos (IPCA)</h2>
+  <form method="post" action="/admin/indices/sync">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="form-grid">
+      <label>Fonte oficial<select name="source"><option value="BCB">BCB / SGS 433 (IPCA)</option><option value="IBGE">IBGE / SIDRA 1737 (IPCA)</option></select></label>
+      <label>Competência inicial<input name="start_month" type="month" required value="{{.DefaultSyncStart}}"></label>
+      <label>Competência final<input name="end_month" type="month" required value="{{.DefaultSyncEnd}}"></label>
+    </div>
+    <p class="help">A sincronização valida lacunas mensais e grava a série em <code>economic_indices</code> / <code>index_points</code> com registro de execução em <code>index_sync_runs</code>.</p>
+    <button>Executar sincronização agora</button>
+  </form>
+
+  <h2>Séries econômicas armazenadas</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Código</th><th>Nome</th><th>Fonte</th><th>Pontos</th><th>Primeira competência</th><th>Última competência</th></tr></thead>
+      <tbody>
+        {{range .Indices}}
+        <tr>
+          <td><code>{{.Code}}</code></td>
+          <td>{{.Name}}</td>
+          <td>{{.Source}}</td>
+          <td>{{.PointCount}}</td>
+          <td>{{if .FirstMonth}}{{.FirstMonth}}{{else}}—{{end}}</td>
+          <td>{{if .LastMonth}}{{.LastMonth}}{{else}}—{{end}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6">Nenhuma série sincronizada no banco até o momento.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Execuções de sincronização</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Índice</th><th>Fonte</th><th>Período</th><th>Estado</th><th>Pontos</th><th>Autor</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        {{range .SyncRuns}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04:05"}}</td>
+          <td><code>{{.IndexCode}}</code></td>
+          <td>{{.Source}}</td>
+          <td>{{.StartMonth}} → {{.EndMonth}}</td>
+          <td><strong>{{.Status}}</strong></td>
+          <td>{{.PointsSynced}}</td>
+          <td>{{.ActorEmail}}</td>
+          <td>{{if .ErrorMessage}}{{.ErrorMessage}}{{else}}OK{{end}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8">Nenhuma execução de sincronização registrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Histórico global de consultas e cálculos</h2>
+  <form method="get" action="/admin/operations">
+    <div class="form-grid">
+      <label>Organização (ID ou slug)<input name="org" value="{{.OrgFilter}}" placeholder="Ex.: escritorio-alfa"></label>
+      <label>Módulo<select name="kind"><option value="">Todos</option>{{range .AllowedFeatures}}{{if ne . "api"}}<option value="{{.}}" {{if eq $.KindFilter .}}selected{{end}}>{{.}}</option>{{end}}{{end}}</select></label>
+    </div>
+    <div class="actions"><button>Filtrar histórico</button><a class="button secondary" href="/admin/operations">Limpar</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Organização</th><th>Autor</th><th>Módulo</th><th>Título</th><th>Motor</th></tr></thead>
+      <tbody>
+        {{range .Operations}}
+        <tr>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+          <td><code>{{.OrganizationSlug}}</code></td>
+          <td>{{.UserEmail}}</td>
+          <td><code>{{.Kind}}</code></td>
+          <td>{{.Title}}</td>
+          <td><code>{{.EngineVersion}}</code></td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6">Nenhuma operação encontrada.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+
+  {{if eq .View "audit"}}
+  <p class="intro">Trilha imutável de eventos administrativos, autenticação, chaves, contratos e operações.</p>
+  <form method="get" action="/admin/audit">
+    <div class="form-grid">
+      <label>Organização (ID ou slug)<input name="org" value="{{.OrgFilter}}"></label>
+      <label>Ação<input name="action" value="{{.ActionFilter}}" placeholder="Ex.: admin.contract_updated"></label>
+      <label>Busca livre (ação, e-mail, organização ou alvo)<input name="q" value="{{.Query}}"></label>
+    </div>
+    <div class="actions"><button>Pesquisar auditoria</button><a class="button secondary" href="/admin/audit">Limpar</a></div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Data</th><th>Ação</th><th>Organização</th><th>Ator</th><th>Alvo</th></tr></thead>
+      <tbody>
+        {{range .AuditEvents}}
+        <tr>
+          <td>#{{.ID}}</td>
+          <td>{{.CreatedAt.Format "02/01/2006 15:04:05"}}</td>
+          <td><code>{{.Action}}</code></td>
+          <td>{{if .OrganizationSlug}}{{.OrganizationSlug}}{{else}}—{{end}}</td>
+          <td>{{if .ActorEmail}}{{.ActorEmail}}{{else}}sistema{{end}}</td>
+          <td><code>{{if .TargetID}}{{.TargetID}}{{else}}—{{end}}</code></td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6">Nenhum evento de auditoria encontrado.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if .NextAuditID}}
+  <div class="actions">
+    <a class="button secondary" href="/admin/audit?before={{.NextAuditID}}&org={{.OrgFilter}}&action={{.ActionFilter}}&q={{.Query}}">Eventos anteriores →</a>
+  </div>
+  {{end}}
+  {{end}}
+</main></body></html>

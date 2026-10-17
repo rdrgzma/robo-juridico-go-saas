@@ -139,3 +139,21 @@ como Teste local; não são dados de cliente. Limites funcionais em WORKSPACE.md
 Verificação final: cmd/devverify passou com cálculo 1020.00 e reload/restauração de
 Go/HTML/CSS. Runtime confirmou uid/gid 65532 e ausência de /src e .local. Status das
 três migrations aplicado, docker compose config --quiet e git diff --check válidos.
+
+## Sprint 4 — painel administrativo (/admin), 17/10/2026
+
+Execução em Docker: migration `000004_admin.sql` aplicada (`schema_migrations` com 4
+arquivos), `go fmt ./...`, `go vet ./...`, `go test -race -count=1 ./...` (integração
+PostgreSQL em 71,828s) e `cmd/devverify` passaram com exit 0.
+
+Testes novos em `tests/integration/admin_test.go`:
+- Negação (`403` / `ErrDenied`) para `owner` ou `admin` de organização que não possua `platform_admin = true`.
+- Cadastro e atualização de planos com recursos granulares (`cnj`, `prazos`, `liquidacao`, `api`) e aplicação imediata no backend (`/app` e `/api/v1`).
+- Criação de organização/cliente com razão social, CNPJ, responsável, valor contratado em decimal, vigência e registro em `organization_contract_history`.
+- Contabilização de bloqueios por esgotamento de cota mensal (`quota_periods.blocked`) tanto na API (`HTTP 402`) quanto no painel (`ErrQuota`).
+- Emissão, rotação atômica (`RotateKey` / `AdminRotateKey` revogando a chave anterior e retornando a nova chave apenas uma vez) e revogação de chaves de API.
+- Suspensão de organização revogando imediatamente sessões ativas e bloqueando o acesso.
+- Gestão de usuários e vínculos com proteção contra remoção do último `owner` da organização ou do último `platform_admin` ativo da plataforma, e disparo de recuperação no outbox criptografado.
+- Sincronização controlada de índices IPCA (`SyncIndices`) com validação de lacunas e gravação em `economic_indices`, `index_points` e `index_sync_runs`.
+- Pesquisa e paginação da trilha de auditoria (`ListAuditEvents`) e renderização autenticada de todas as rotas HTTP de `/admin`.
+

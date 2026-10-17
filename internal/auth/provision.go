@@ -2,6 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/tenancy"
 )
 
@@ -38,4 +42,154 @@ func (s *Service) CreateDevelopmentMember(ctx context.Context, organization, ema
 		return p, err
 	}
 	return p, tx.Commit(ctx)
+}
+
+func (s *Service) AdminTriggerRecovery(ctx context.Context, actor tenancy.Principal, userID string) error {
+	if !actor.PlatformAdmin || actor.RequiresMFA() {
+		return ErrDenied
+	}
+	if !uuidPattern.MatchString(userID) {
+		return ErrNotFound
+	}
+	token := RandomToken()
+	payload, err := s.seal(s.options.Origin+"/reset?token="+token, "outbox:"+userID)
+	if err != nil {
+		return err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	var orgID string
+	if err = tx.QueryRow(ctx, "SELECT COALESCE((SELECT organization_id::text FROM memberships WHERE user_id=$1 ORDER BY active DESC LIMIT 1), $2) FROM users WHERE id=$1 AND active FOR UPDATE", userID, actor.OrganizationID).Scan(&orgID); errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	now := s.now()
+	if _, err = tx.Exec(ctx, "DELETE FROM password_resets WHERE user_id=$1", userID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO password_resets(token_hash,user_id,expires_at,created_at) VALUES($1,$2,$3,$4)", Digest(token), userID, now.Add(15*time.Minute), now); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO mail_outbox(user_id,kind,encrypted_payload,created_at) VALUES($1,'password_reset',$2,$3)", userID, payload, now); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO audit_events(organization_id,actor_id,action,target_id) VALUES($1,$2,'admin.user_recovery_requested',$3)", orgID, actor.UserID, userID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *Service) AdminIssueKey(ctx context.Context, actor tenancy.Principal, orgID, name string, scopes []string) (Key, string, error) {
+	var key Key
+	if !actor.PlatformAdmin || actor.RequiresMFA() {
+		return key, "", ErrDenied
+	}
+	if !uuidPattern.MatchString(orgID) {
+		return key, "", ErrNotFound
+	}
+	if len(name) < 1 || len(name) > 100 || len(scopes) == 0 || len(scopes) > 2 {
+		return key, "", ErrConflict
+	}
+	seen := map[string]bool{}
+	for _, scope := range scopes {
+		if (scope != "account:read" && scope != "calculations:run") || seen[scope] {
+			return key, "", ErrDenied
+		}
+		seen[scope] = true
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return key, "", err
+	}
+	defer tx.Rollback(context.Background())
+	var creatorID string
+	err = tx.QueryRow(ctx, `SELECT m.user_id::text FROM organizations o
+ JOIN memberships m ON m.organization_id=o.id JOIN users u ON u.id=m.user_id
+ WHERE o.id=$1 AND o.active AND m.active AND u.active AND m.role_code IN ('owner','admin')
+ ORDER BY (m.role_code='owner') DESC, u.created_at ASC LIMIT 1 FOR UPDATE OF o`, orgID).Scan(&creatorID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return key, "", ErrConflict
+	}
+	if err != nil {
+		return key, "", err
+	}
+	var count int
+	if err = tx.QueryRow(ctx, "SELECT count(*) FROM api_keys WHERE organization_id=$1 AND revoked_at IS NULL", orgID).Scan(&count); err != nil {
+		return key, "", err
+	}
+	if count >= 100 {
+		return key, "", ErrConflict
+	}
+	token := "rj_" + RandomToken()
+	key.Name = name
+	key.Prefix = token[:11]
+	key.Scopes = scopes
+	if err = tx.QueryRow(ctx, "INSERT INTO api_keys(organization_id,created_by,name,prefix,token_hash,scopes) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text,created_at", orgID, creatorID, name, key.Prefix, Digest(token), scopes).Scan(&key.ID, &key.CreatedAt); err != nil {
+		return key, "", err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO audit_events(organization_id,actor_id,action,target_id) VALUES($1,$2,'admin.api_key_created',$3)", orgID, actor.UserID, key.ID); err != nil {
+		return key, "", err
+	}
+	return key, token, tx.Commit(ctx)
+}
+
+func (s *Service) AdminRotateKey(ctx context.Context, actor tenancy.Principal, id string) (Key, string, error) {
+	var key Key
+	if !actor.PlatformAdmin || actor.RequiresMFA() {
+		return key, "", ErrDenied
+	}
+	if !uuidPattern.MatchString(id) {
+		return key, "", ErrNotFound
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return key, "", err
+	}
+	defer tx.Rollback(context.Background())
+	var orgID, createdBy string
+	if err = tx.QueryRow(ctx, "SELECT organization_id::text,created_by::text,name,scopes FROM api_keys WHERE id=$1 AND revoked_at IS NULL FOR UPDATE", id).Scan(&orgID, &createdBy, &key.Name, &key.Scopes); errors.Is(err, pgx.ErrNoRows) {
+		return key, "", ErrNotFound
+	} else if err != nil {
+		return key, "", err
+	}
+	if _, err = tx.Exec(ctx, "UPDATE api_keys SET revoked_at=$2 WHERE id=$1 AND revoked_at IS NULL", id, s.now()); err != nil {
+		return key, "", err
+	}
+	token := "rj_" + RandomToken()
+	key.Prefix = token[:11]
+	if err = tx.QueryRow(ctx, "INSERT INTO api_keys(organization_id,created_by,name,prefix,token_hash,scopes) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text,created_at", orgID, createdBy, key.Name, key.Prefix, Digest(token), key.Scopes).Scan(&key.ID, &key.CreatedAt); err != nil {
+		return key, "", err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO audit_events(organization_id,actor_id,action,target_id) VALUES($1,$2,'admin.api_key_rotated',$3)", orgID, actor.UserID, key.ID); err != nil {
+		return key, "", err
+	}
+	return key, token, tx.Commit(ctx)
+}
+
+func (s *Service) AdminRevokeKey(ctx context.Context, actor tenancy.Principal, id string) error {
+	if !actor.PlatformAdmin || actor.RequiresMFA() {
+		return ErrDenied
+	}
+	if !uuidPattern.MatchString(id) {
+		return ErrNotFound
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	var orgID string
+	if err = tx.QueryRow(ctx, "UPDATE api_keys SET revoked_at=$2 WHERE id=$1 AND revoked_at IS NULL RETURNING organization_id::text", id, s.now()).Scan(&orgID); errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO audit_events(organization_id,actor_id,action,target_id) VALUES($1,$2,'admin.api_key_revoked',$3)", orgID, actor.UserID, id); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/admin"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/auth"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/calculator"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/cnj"
@@ -45,15 +46,18 @@ func (g *gate) allow() bool {
 }
 
 func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Context) error) http.Handler {
-	return newRouter(keyHash, logger, nil, nil, readiness...)
+	return newRouter(keyHash, logger, nil, nil, nil, readiness...)
 }
 func NewWithIdentity(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, readiness ...func(context.Context) error) http.Handler {
-	return newRouter(keyHash, logger, identity, nil, readiness...)
+	return newRouter(keyHash, logger, identity, nil, nil, readiness...)
 }
 func NewWithWorkspace(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, readiness ...func(context.Context) error) http.Handler {
-	return newRouter(keyHash, logger, identity, workspace, readiness...)
+	return newRouter(keyHash, logger, identity, workspace, nil, readiness...)
 }
-func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, readiness ...func(context.Context) error) http.Handler {
+func NewWithAdmin(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, adminPanel *admin.Service, readiness ...func(context.Context) error) http.Handler {
+	return newRouter(keyHash, logger, identity, workspace, adminPanel, readiness...)
+}
+func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, adminPanel *admin.Service, readiness ...func(context.Context) error) http.Handler {
 	started := time.Now().UTC().Format(time.RFC3339Nano)
 	r := chi.NewRouter()
 	limiter := &gate{}
@@ -69,8 +73,12 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, wo
 			w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 			ww := middleware.NewWrapResponseWriter(w, req.ProtoMajor)
 			next.ServeHTTP(ww, req)
+			elapsed := time.Since(start)
+			if adminPanel != nil {
+				adminPanel.RecordRequest(ww.Status(), elapsed)
+			}
 			// No URL, query string, body, IP or credentials in logs.
-			logger.Info("http", "request_id", middleware.GetReqID(req.Context()), "method", req.Method, "status", ww.Status(), "duration_ms", time.Since(start).Milliseconds())
+			logger.Info("http", "request_id", middleware.GetReqID(req.Context()), "method", req.Method, "status", ww.Status(), "duration_ms", elapsed.Milliseconds())
 		})
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +92,7 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, wo
 	r.Get("/static/app.css", web.AppStyle)
 	r.Get("/static/app.js", web.AppScript)
 	r.Get("/saude", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"status": "ok", "sprint": 3, "production_ready": false})
+		reply(w, 200, map[string]any{"status": "ok", "sprint": 4, "production_ready": false})
 	})
 	r.Get("/openapi.json", web.OpenAPI)
 	r.Get("/docs", web.Docs)
@@ -108,6 +116,14 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, wo
 		} else {
 			r.Get("/app", identity.Web("calculations:run", func(w http.ResponseWriter, r *http.Request) {
 				web.Auth(w, map[string]any{"View": "account", "Title": "Área jurídica autenticada"})
+			}))
+		}
+		if adminPanel != nil {
+			adminPanel.Mount(r)
+		} else {
+			r.Get("/admin", identity.WebAdmin(func(w http.ResponseWriter, r *http.Request) {
+				p, _ := tenancy.FromContext(r.Context())
+				web.Auth(w, map[string]any{"View": "account", "Title": "Painel administrativo autenticado", "Principal": p})
 			}))
 		}
 	} else {
