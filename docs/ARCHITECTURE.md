@@ -27,5 +27,11 @@ internal/tenancy transporta o principal explícito por contexto. cmd/identity pr
 contas locais, sem incluir credenciais fixas ou ferramenta no runtime. Web autentica
 por cookie e CSRF; API exige chave, escopo e permissão atual. PostgreSQL persiste
 sessões, auditoria e reservas; o reconciliador recupera reservas abandonadas.
-Painéis operacionais admin/portal/juridico serão desenvolvidos nas próximas sprints.
+Painéis operacionais admin/portal serão desenvolvidos nas próximas sprints; /app é descrito abaixo.
 Produção bloqueada até homologação operacional. Ver AUTH.md para limites e RLS.
+
+Sprint 3: internal/juridico coordena engines existentes, fontes HTTP com limites e
+histórico. Não há motores paralelos no frontend. NewWithWorkspace compõe /app sem
+misturar cookies web e chaves REST. Formulários server-side e tema em JavaScript
+pequeno; nenhum framework frontend novo. Recursos embutidos e sem dependência do
+legado em runtime. WORKSPACE.md registra limites funcionais e de homologação.

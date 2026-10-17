@@ -73,3 +73,12 @@ Chaves emitidas/revogadas em /account/keys. Erros adicionais: 403 escopo/permiss
 de cálculo bem-sucedidos/mês (America/Sao_Paulo), 60 chamadas/minuto compartilhadas.
 Reserva antes de calcular, estorno em falhas; pendências >10min são reconciliadas.
 CNJ/consultas gratuitas registram uso sem débito mensal. Detalhes em AUTH.md.
+
+## Painel web da Sprint 3
+
+/app usa sessões e formulários com CSRF; não envia senhas ou API keys ao JavaScript.
+Os endpoints REST anteriores permanecem com seus contratos. Consultas externas,
+histórico e downloads desta entrega são rotas privadas /app, não novos endpoints
+REST de paridade com todo o legado. As chamadas web compartilham a franquia mensal
+da organização com os cálculos da API. Rate bucket web é independente do bucket API.
+Guia completo em WORKSPACE.md.

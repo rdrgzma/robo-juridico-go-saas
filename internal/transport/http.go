@@ -17,6 +17,7 @@ import (
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/auth"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/calculator"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/cnj"
+	"github.com/rdrgzma/robo-juridico-go-saas/internal/juridico"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/prazos"
 	"github.com/rdrgzma/robo-juridico-go-saas/internal/tenancy"
 	"github.com/rdrgzma/robo-juridico-go-saas/web"
@@ -44,12 +45,15 @@ func (g *gate) allow() bool {
 }
 
 func New(keyHash [32]byte, logger *slog.Logger, readiness ...func(context.Context) error) http.Handler {
-	return newRouter(keyHash, logger, nil, readiness...)
+	return newRouter(keyHash, logger, nil, nil, readiness...)
 }
 func NewWithIdentity(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, readiness ...func(context.Context) error) http.Handler {
-	return newRouter(keyHash, logger, identity, readiness...)
+	return newRouter(keyHash, logger, identity, nil, readiness...)
 }
-func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, readiness ...func(context.Context) error) http.Handler {
+func NewWithWorkspace(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, readiness ...func(context.Context) error) http.Handler {
+	return newRouter(keyHash, logger, identity, workspace, readiness...)
+}
+func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, workspace *juridico.Service, readiness ...func(context.Context) error) http.Handler {
 	started := time.Now().UTC().Format(time.RFC3339Nano)
 	r := chi.NewRouter()
 	limiter := &gate{}
@@ -77,8 +81,10 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, re
 	})
 	r.Get("/", web.Index)
 	r.Get("/static/style.css", web.Style)
+	r.Get("/static/app.css", web.AppStyle)
+	r.Get("/static/app.js", web.AppScript)
 	r.Get("/saude", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"status": "ok", "sprint": 2, "production_ready": false})
+		reply(w, 200, map[string]any{"status": "ok", "sprint": 3, "production_ready": false})
 	})
 	r.Get("/openapi.json", web.OpenAPI)
 	r.Get("/docs", web.Docs)
@@ -97,6 +103,13 @@ func newRouter(keyHash [32]byte, logger *slog.Logger, identity *auth.Service, re
 	engine := calculator.NovoEngineCalculo(nil)
 	if identity != nil {
 		identity.Mount(r)
+		if workspace != nil {
+			workspace.Mount(r)
+		} else {
+			r.Get("/app", identity.Web("calculations:run", func(w http.ResponseWriter, r *http.Request) {
+				web.Auth(w, map[string]any{"View": "account", "Title": "Área jurídica autenticada"})
+			}))
+		}
 	} else {
 		for _, path := range []string{"/app", "/admin", "/portal"} {
 			r.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

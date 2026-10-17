@@ -31,3 +31,10 @@ entrega externa de e-mail e revisão de segurança. Build não equivale a deploy
 Para laudos: cálculo no servidor, proveniência e versão do motor, resultado integral
 canônico assinado/HMAC com segredo externo e rotação; frontend jamais prova autenticidade.
 Nenhum desses controles futuros é considerado concluído por existir página ou tabela.
+
+Painel Sprint 3: histórico/downloads/recálculo filtrados por organização, com permissão
+atual e MFA; imports limitados, resultados escapados e CSV protegido. Memória privada
+com HMAC do registro completo e CSS próprio com hash CSP na exportação HTML.
+Sem verificador público, uploads de laudo ou alegação de certificação jurídica.
+Fontes possuem destinos fixos, timeout, limite de resposta e não seguem redirects.
+Nenhuma chave ou corpo de consulta é registrado nos logs. Detalhes em WORKSPACE.md.

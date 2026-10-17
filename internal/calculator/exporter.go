@@ -23,7 +23,7 @@ func ExportarMemoriaCSV(resp *CalculoJudicialResponse) ([]byte, error) {
 	w.Comma = ';'
 
 	// Cabeçalho do Resumo
-	_ = w.Write([]string{"LAUDO PERICIAL DE LIQUIDACAO JUDICIAL - MEMORIA DE CALCULO"})
+	_ = w.Write([]string{"MEMORIA DE LIQUIDACAO JUDICIAL - CALCULO DO SERVIDOR"})
 	_ = w.Write([]string{"Data Base de Atualizacao", resp.Resumo.DataAtualizacao})
 	_ = w.Write([]string{"Indexador Monetario", resp.Resumo.IndexadorNome})
 	_ = w.Write([]string{""})

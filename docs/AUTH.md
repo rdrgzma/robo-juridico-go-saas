@@ -81,8 +81,8 @@ Filtros explícitos por organização, permissões e FKs compostas protegem memb
 sessões e chaves; testes negativos cobrem IDOR e concorrência. RLS foi avaliado como
 defesa adicional e não está habilitado: descoberta inicial de identidade exige desenho
 separado de credenciais e contexto transacional SET LOCAL seguro para o pool.
-Auditoria persistente registra ações de identidade. /app, /admin e /portal têm controle
-de acesso, mas seus painéis operacionais completos ficam nas sprints seguintes.
+Auditoria persistente registra ações de identidade. /app possui painel jurídico operacional (WORKSPACE.md). /admin e /portal têm controle
+de acesso; funções de negócio ficam nas sprints seguintes.
 Produção permanece bloqueada até homologação operacional e jurídica.
 
 ## Atalhos de login locais

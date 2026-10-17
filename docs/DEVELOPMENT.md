@@ -94,3 +94,10 @@ http://localhost:8081/login e configure MFA. Use a origem canônica PUBLIC_ORIGI
 Comandos member/outbox e política de segredos em AUTH.md. .local é excluído do Git,
 Docker e Air. HTTP local usa cookie sem Secure; HTTPS o exige. Não regenere a chave
 de criptografia existente: ela protege MFA/outbox. Não existe envio real de e-mail.
+
+## Painel jurídico
+
+Abra /app como lawyer/owner/admin. Fontes opcionais: DATAJUD_API_KEY e DJEN_ENABLED
+no .env; depois recrie somente o app. Parâmetros e limites em WORKSPACE.md.
+Teste externo de índices (opcional, requer rede, não executado no CI):
+`docker compose exec -T -e RJ_EXTERNAL_SMOKE=1 app go test -count=1 ./internal/juridico -run TestOfficialIndexSmoke -v`.

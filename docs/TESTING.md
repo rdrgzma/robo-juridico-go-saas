@@ -108,3 +108,34 @@ preservados e administrador global redirecionado ao MFA. Testes HTTPS de login/M
 existentes e go vet passaram. No navegador interno, os cinco botões foram conferidos
 e o atalho Advogado abriu a conta com papel lawyer. Compatibilidade Origin null
 restrita ao desenvolvimento loopback habilitado documentada em AUTH.md.
+
+## Sprint 3 — painel jurídico, 17/10/2026
+
+Execução em Docker: go fmt, go vet, go test -race -count=1 ./... e build Linux
+passaram. Integração completa: 94,789s nesta rodada, com build da imagem em paralelo.
+Imagem multi-stage construída. Scanner v1.9.0: zero vulnerabilidades em símbolos ou
+pacotes importados; permanece o advisory de módulo OpenPGP não utilizado já descrito.
+Não foi confirmado resultado remoto do GitHub Actions.
+
+Testes novos de workspace: cálculo conhecido 1020.00, persistência entre instâncias,
+idempotência concorrente, rejeição de conteúdo diferente na mesma chave, quota
+concorrente exata, rollback em entrada inválida, revogação de permissão, histórico
+entre organizações, downloads e recálculo com ID de outra organização, XSS, CSRF,
+importação multipart CSV real, recálculo de parcelas recuperadas no servidor e XLSX.
+HMAC é estável após normalização JSONB e recusa adulteração do resultado completo.
+Migrations de banco vazio/reaplicação/concorrência atualizadas para três arquivos.
+
+Clientes externos: contratos sintéticos DataJud/DJEN, cache separado por organização,
+404 tratado como falha, processo divergente, respostas excessivas, séries BCB/IBGE,
+lacunas/duplicação/valores ausentes e limite de doze meses. TestOfficialIndexSmoke foi
+executado com RJ_EXTERNAL_SMOKE=1 e passou nas APIs reais BCB/IBGE: janeiro 2024 =
+0.42%, fevereiro = 0.83%. Sem rede na suíte padrão. DataJud/DJEN não consultados ao vivo.
+
+Navegador local: login de advogado, /app, formulário de revisão com exemplo sintético,
+resultado persistido (1066.19 contratado, 1052.77 revisado, diferença 13.42), e consulta
+real IPCA BCB com histórico conferidos. Registros locais de smoke estão identificados
+como Teste local; não são dados de cliente. Limites funcionais em WORKSPACE.md.
+
+Verificação final: cmd/devverify passou com cálculo 1020.00 e reload/restauração de
+Go/HTML/CSS. Runtime confirmou uid/gid 65532 e ausência de /src e .local. Status das
+três migrations aplicado, docker compose config --quiet e git diff --check válidos.

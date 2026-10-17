@@ -1,9 +1,10 @@
 # Robô Jurídico Go SaaS
 
-Sprint 2: autenticação, sessões, usuários, organizações e permissões sobre a fundação
-Go/Docker/PostgreSQL. MFA administrativo, recuperação segura e chaves vinculadas à
-organização com consumo transacional. Painéis operacionais e homologação jurídica
-completa continuam nas próximas sprints. Não publicar em produção.
+Sprint 3: painel jurídico funcional com consultas, cálculos, revisão bancária,
+prazos, índices, histórico e exportações sobre a identidade multiempresa da Sprint 2.
+Fontes externas dependem da configuração e têm limites explícitos. Homologação
+jurídica completa, admin e portal de negócio continuam nas próximas etapas.
+Não publicar em produção. Detalhes em [Painel jurídico](docs/WORKSPACE.md).
 
 ## Iniciar no Windows
 
@@ -33,7 +34,8 @@ no host o Compose publica exclusivamente `127.0.0.1:8081`. Banco sem porta publi
 | `/v1` e `/api/v1` | API autenticada por chave |
 | `/login` | Login por organização, e-mail e senha |
 | `/account` | Identidade, membros, papéis, chaves e MFA |
-| `/app`, `/admin`, `/portal` | Áreas autenticadas; funções operacionais nas próximas sprints |
+| `/app` | Painel jurídico, histórico e exportações por organização |
+| `/admin`, `/portal` | Áreas autenticadas; negócio nas Sprints 4/5 |
 
 A chave de compatibilidade para simulações locais fica em `.dev-api-key`, ignorada pelo Git.
 Ela não acessa dados privados. Chaves emitidas em `/account/keys` são vinculadas à
@@ -93,11 +95,12 @@ A API `/calculos/judicial` está habilitada para cálculo convencional com
 LEI_14905 e SELIC são bloqueados na API até integrar e homologar séries oficiais.
 Pagamentos intermediários são rejeitados; imputação disponível para pagamento na
 data final. Esses limites fazem parte do contrato, não são correções silenciosas.
-Consultas DataJud/DJEN, séries oficiais, histórico e laudos ainda serão integrados.
+Painel com histórico, fontes opcionais DataJud/DJEN e consulta informativa IPCA BCB/IBGE
+disponíveis. Laudos públicos/homologados e políticas jurídicas avançadas são futuros.
 
 ## Evidências e documentação
 
-[Autenticação e isolamento](docs/AUTH.md), [desenvolvimento](docs/DEVELOPMENT.md), [testes executados](docs/TESTING.md),
+[Painel jurídico e fontes](docs/WORKSPACE.md), [autenticação e isolamento](docs/AUTH.md), [desenvolvimento](docs/DEVELOPMENT.md), [testes executados](docs/TESTING.md),
 [progresso](docs/PROGRESS.md), [auditoria](docs/AUDITORIA_LEGADO.md),
 [arquitetura](docs/ARCHITECTURE.md), [banco](docs/DATABASE.md),
 [segurança](docs/SECURITY.md), [API](docs/API.md), [migração](docs/MIGRATION.md),
@@ -108,8 +111,8 @@ Repositório Git independente em main; origem auditada em
 reaproveitamento dos fontes nesta conversa em 17/10/2026; ver [proveniência](NOTICE.md).
 Nenhum serviço, banco ou arquivo do sistema antigo foi modificado.
 
-Remoto configurado: https://github.com/rdrgzma/robo-juridico-go-saas.git. A Sprint 1
-foi publicada em main. Comandos abaixo são apenas referência para uma instalação
+Remoto configurado: https://github.com/rdrgzma/robo-juridico-go-saas.git. As entregas
+são publicadas em main. Comandos abaixo são apenas referência para uma instalação
 que ainda não tenha remoto; não recriar um repositório existente:
 
 ```sh

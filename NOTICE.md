@@ -22,3 +22,9 @@ células esparsas e inline strings. O engine recebeu validações e rejeições 
 
 Não foram copiados .env, tokens, bancos, dados pessoais, executáveis ou PHP.
 O repositório original foi acessado somente por leitura e nunca recebeu commit/push.
+
+Na Sprint 3, a paleta, organização do menu e alternância de tema tomam como
+referência os arquivos 5-app-juridico-desktop/ui/static/index.html e style.css no
+mesmo commit auditado. Foram adaptados para templates Go, permissões e histórico
+PostgreSQL. Clientes externos são novos, orientados por contratos oficiais e pela
+inspeção dos clientes DataJud/Comunica do legado; não copiam chaves, proxies ou dados.

@@ -26,7 +26,14 @@ de auditoria, chaves/escopos, limites e períodos/eventos de consumo. FKs compos
 impedem relacionar sessões ou chaves a criadores fora da organização. Reservas e
 estornos são transacionais; concorrência e IDOR têm testes negativos.
 RLS não está habilitado; avaliação e limites em AUTH.md. Planos comerciais,
-assinaturas, cálculos/laudos persistidos e jobs de negócio são etapas futuras.
+assinaturas, laudos públicos e jobs de negócio são etapas futuras. Cálculos/histórico
+são implementados na migration 000003 descrita abaixo.
 
 Persistência do volume foi exercitada com uma organização sintética de teste antes
 e depois de reiniciar app e db novos. Nenhuma base de produção foi conectada.
+
+Migration 000003_workspace.sql cria legal_operations com organização, usuário,
+tipo, título, entrada e resultado JSONB, versão e instante. FK composta exige membership
+na organização. Chave de idempotência é única por organização/usuário. Histórico tem
+índice por organização/data/UUID; paginação usa cursor composto para não perder empates.
+Sem endpoints de edição/exclusão. Conteúdo privado exige sessão e calculations:run.

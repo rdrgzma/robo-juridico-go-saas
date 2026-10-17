@@ -81,12 +81,23 @@ func (s *Service) form(w http.ResponseWriter, r *http.Request, token string, pre
 		return false
 	}
 	content, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || content != "application/x-www-form-urlencoded" {
+	multipartUpload := content == "multipart/form-data" && r.URL.Path == "/app/judicial/import"
+	if err != nil || (content != "application/x-www-form-urlencoded" && !multipartUpload) {
 		http.Error(w, "Formato de formulário inválido", 415)
 		return false
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
-	if err := r.ParseForm(); err != nil {
+	limit := int64(16 << 10)
+	if multipartUpload {
+		limit = (2 << 20) + (32 << 10)
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
+	var parseErr error
+	if multipartUpload {
+		parseErr = r.ParseMultipartForm(3 << 20)
+	} else {
+		parseErr = r.ParseForm()
+	}
+	if parseErr != nil {
 		http.Error(w, "Formulário inválido", 400)
 		return false
 	}
@@ -235,7 +246,7 @@ func (s *Service) Mount(r chi.Router) {
 	r.Get("/account", s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 		render(w, 200, view{View: "account", Title: "Minha identidade", Principal: p, CSRF: s.CSRF(token)})
 	}))
-	for _, path := range []string{"/app", "/portal", "/admin"} {
+	for _, path := range []string{"/portal", "/admin"} {
 		path := path
 		r.Get(path, s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
 			if path == "/admin" && (!p.PlatformAdmin || !p.MFAVerified) {
@@ -357,3 +368,20 @@ func (s *Service) APIError(err error) int {
 	}
 }
 func (s *Service) String() string { return fmt.Sprintf("identity service (%s)", s.options.Origin) }
+
+// Web authenticates the session and enforces the current organization permission.
+func (s *Service) Web(permission string, next http.HandlerFunc) http.HandlerFunc {
+	return s.protected(true, func(w http.ResponseWriter, r *http.Request, p tenancy.Principal, token string) {
+		if !p.Can(permission) {
+			http.Error(w, "Sem permissão para esta operação", 403)
+			return
+		}
+		next(w, r)
+	})
+}
+
+// ValidateWebForm must be called for every workspace mutation, after Web.
+func (s *Service) ValidateWebForm(w http.ResponseWriter, r *http.Request) bool {
+	return s.form(w, r, readCookie(r, sessionCookie), false)
+}
+func (s *Service) WebCSRF(r *http.Request) string { return s.CSRF(readCookie(r, sessionCookie)) }
